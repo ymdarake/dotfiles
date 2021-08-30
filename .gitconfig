@@ -1,0 +1,14 @@
+[alias]
+	st = status
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+	dn = diff --name-only
+	dm = diff master
+	ck = checkout
+	cm = commit -m
+	rb = rebase -i HEAD~2
+	ft = fetch --all --prune
+	permission-reset = "!git diff -p | grep -E \"^(diff|old mode|new mode)\" | sed -e \"s/^old/NEW/;s/^new/old/;s/^NEW/new/\" | git apply"
+	br = branch
+	brd = branch -d
+	brdf = branch -D
+	delbr = "!f () { git checkout $1; git branch --merged|egrep -v '\\*|develop|main|master' | xargs git branch -d; };f"
