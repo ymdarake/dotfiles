@@ -1,6 +1,7 @@
 colorscheme codedark
 
 set number
+set hls
 
 call plug#begin()
 " enables file tree
