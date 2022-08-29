@@ -13,3 +13,5 @@ alias dup='docker-compose up -d'
 alias dwn='docker-compose down'
 
 alias nrs='npm run serve'
+
+alias exa='exa -laT --git-ignore -I .git'
