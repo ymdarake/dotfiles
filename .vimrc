@@ -1,6 +1,6 @@
 colorscheme codedark
 
-set number
+set number rnu
 set hls
 
 call plug#begin()
