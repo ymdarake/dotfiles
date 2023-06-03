@@ -27,10 +27,10 @@ alias exa='exa -laT --icons --git-ignore -I .git'
 # Langs
 
 ############ goenv ############
-if [[ -e "~/.goenv" ]]; then
+if [[ -e "$HOME/.goenv" ]]; then
 # https://github.com/syndbg/goenv/blob/master/INSTALL.md
 # git clone https://github.com/syndbg/goenv.git ~/.goenv
-export GOENV_ROOT="~/.goenv"
+export GOENV_ROOT="$HOME/.goenv"
 export PATH="$GOENV_ROOT/bin:$PATH"
 eval "$(goenv init -)"
 export PATH="$GOROOT/bin:$PATH"
