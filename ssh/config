@@ -1,0 +1,4 @@
+Host github.com
+    HostName github.com
+    IdentityFile /home/ymdarake/.ssh/id_ed25519
+    IdentitiesOnly yes
