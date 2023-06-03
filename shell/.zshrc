@@ -1,5 +1,13 @@
-# .zshrc
-export PS1="%10F%m%f:%09F%1~%f \$ "
+# Use powerline
+USE_POWERLINE="true"
+# Source manjaro-zsh-configuration
+if [[ -e /usr/share/zsh/manjaro-zsh-config ]]; then
+  source /usr/share/zsh/manjaro-zsh-config
+fi
+# Use manjaro zsh prompt
+if [[ -e /usr/share/zsh/manjaro-zsh-prompt ]]; then
+  source /usr/share/zsh/manjaro-zsh-prompt
+fi
 
 # Built-in commands
 alias ll='ls -GFhla'
