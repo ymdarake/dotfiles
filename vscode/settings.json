@@ -1,0 +1,7 @@
+{
+    "workbench.colorTheme": "Default Dark Modern",
+    "terminal.integrated.fontFamily": "MesloLGS NF",
+    "files.hotExit": "onExit",
+    "workbench.editor.enablePreview": false,
+    "explorer.autoReveal": false
+}

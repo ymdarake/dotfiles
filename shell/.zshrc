@@ -7,7 +7,7 @@ alias cl='clear'
 alias grep='grep --color=auto'
 
 # Custom commands
-alias cdpr='cd ~/dev/projects'
+alias cdpr='cd ~/workspace/projects'
 
 alias dup='docker-compose up -d'
 alias dwn='docker-compose down'

@@ -1,3 +1,7 @@
-# Vim
- - Install [vim-plug](https://github.com/junegunn/vim-plug)
- - `PlugInstall` to install plugins in .vimrc
+# dotfiles
+
+## Content
+- [Shell](./shell)
+- [Vim](./vim)
+- [VSCode](./vscode)
+- [.git](./git)
