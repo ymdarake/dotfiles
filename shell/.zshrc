@@ -23,3 +23,19 @@ alias dwn='docker-compose down'
 alias nrs='npm run serve'
 
 alias exa='exa -laT --icons --git-ignore -I .git'
+
+# Langs
+
+############ goenv ############
+if [[ -e "~/.goenv" ]]; then
+# https://github.com/syndbg/goenv/blob/master/INSTALL.md
+# git clone https://github.com/syndbg/goenv.git ~/.goenv
+export GOENV_ROOT="~/.goenv"
+export PATH="$GOENV_ROOT/bin:$PATH"
+eval "$(goenv init -)"
+export PATH="$GOROOT/bin:$PATH"
+export PATH="$PATH:$GOPATH/bin"
+fi
+###############################
+
+
