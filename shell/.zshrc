@@ -7,6 +7,8 @@ fi
 # Use manjaro zsh prompt
 if [[ -e /usr/share/zsh/manjaro-zsh-prompt ]]; then
   source /usr/share/zsh/manjaro-zsh-prompt
+else
+  export PS1="%10F%m%f:%09F%1~%f \$ "
 fi
 
 # Built-in commands
