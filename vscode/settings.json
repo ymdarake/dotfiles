@@ -1,7 +1,11 @@
 {
+    "workbench.startupEditor": "none",
     "workbench.colorTheme": "Default Dark Modern",
-    "terminal.integrated.fontFamily": "MesloLGS NF",
-    "files.hotExit": "onExit",
+    "window.title": "${activeEditorMedium}${separator}${rootName}",
     "workbench.editor.enablePreview": false,
-    "explorer.autoReveal": false
+    "scm.autoReveal": false,
+    "files.hotExit": "onExit",
+    "explorer.autoReveal": false,
+    "git.autofetch": true,
+    "git.confirmSync": false
 }
