@@ -2,3 +2,4 @@ Host github.com
     HostName github.com
     IdentityFile ~/.ssh/id_ed25519
     IdentitiesOnly yes
+    UseKeychain yes
