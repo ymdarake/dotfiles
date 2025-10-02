@@ -160,6 +160,20 @@ Anthropic公式では `CLAUDE.md` という名前も推奨されています。�
    - `/permissions` コマンドで確認・設定
    - `.claude/settings.json` で管理
    - 段階的に許可範囲を広げる
+   - 📖 [詳しい説明はこちら](./settings_guide.md)
+   - 💾 [サンプルファイル](./settings.json.sample)
+
+## このディレクトリの内容
+
+### 設定ファイルサンプル
+- `global_CLAUDE.md` - グローバル設定のテンプレート
+- `project_CLAUDE*.md` - 言語・用途別プロジェクト設定サンプル
+- `ignore_sample.txt` / `global_ignore_sample.txt` - 無視ファイル設定
+- `settings.json.sample` - 権限設定サンプル
+
+### ガイド・テンプレート
+- `settings_guide.md` - settings.json の詳しい説明
+- `prompt_templates.md` - よく使うプロンプト集
 
 ## 参考リンク
 
