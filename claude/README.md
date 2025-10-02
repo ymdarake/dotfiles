@@ -46,6 +46,24 @@ ln -s $(pwd)/global_CLAUDE.md ~/.claude/CLAUDE.md
 
 **注意**: シンボリックリンクを作成する前に、既存のファイルがある場合はバックアップを取ってください。
 
+### 4. MCP サーバーの設定（オプション）
+
+#### Serena MCP Server
+
+セマンティックなコード操作を提供するMCPサーバー。プロジェクトごとに以下のコマンドを実行：
+
+```bash
+# プロジェクトのルートディレクトリで実行
+claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena-mcp-server --context ide-assistant --project $(pwd)
+```
+
+**機能:**
+- シンボル単位でのコード検索・編集
+- ファイル構造の効率的な把握
+- リファクタリング支援
+
+**注意:** プロジェクトごとに設定が必要です。一度実行すれば、そのプロジェクトで継続的に使用できます。
+
 #### おすすめの初期設定
 
 **~/.config/claude-code/project_instructions.md**

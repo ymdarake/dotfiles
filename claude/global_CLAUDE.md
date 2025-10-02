@@ -77,21 +77,6 @@
 - ディレクトリ構造を ls や tree で確認
 - .claude/CLAUDE.md にプロジェクト固有の情報を確認
 
-## MCP設定
-
-### Serena MCP Server
-
-セマンティックなコード操作を提供するMCPサーバー。プロジェクトのルートディレクトリで以下のコマンドを実行して追加：
-
-```bash
-claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena-mcp-server --context ide-assistant --project $(pwd)
-```
-
-機能:
-- シンボル単位でのコード検索・編集
-- ファイル構造の効率的な把握
-- リファクタリング支援
-
 ## よく使うBashコマンド
 
 ```bash
