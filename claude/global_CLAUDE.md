@@ -49,6 +49,22 @@
 - .envファイルは必ず.gitignoreに追加
 - APIキーやトークンはコードに直接書かない
 
+## プロジェクト構造の把握
+
+- まず README.md を確認する
+- package.json、go.mod、Cargo.toml 等から技術スタックを把握
+- ディレクトリ構造を ls や tree で確認
+- .claude/CLAUDE.md にプロジェクト固有の情報を確認
+
+## よく使うBashコマンド
+
+```bash
+ls -la                  # ファイル一覧を詳細表示
+git status              # Gitの状態確認
+git log --oneline -10   # 最近のコミット履歴
+cat README.md           # READMEを確認
+```
+
 ## その他
 
 - READMEは常に最新に保つ
