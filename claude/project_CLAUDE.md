@@ -1,6 +1,6 @@
-# プロジェクト指示サンプル
+# プロジェクト設定
 
-このファイルは `.claude/project_instructions.md` または `.claude/CLAUDE.md` として使用できるサンプルです。
+プロジェクト固有の設定として `.claude/project_instructions.md` または `.claude/CLAUDE.md` に配置するファイルです。
 
 ## Bashコマンド
 

@@ -28,6 +28,24 @@ mkdir -p .claude
 mkdir -p ~/.config/claude-code
 ```
 
+#### シンボリックリンクで設定を反映
+
+このdotfilesリポジトリから設定をシンボリックリンクで反映する場合：
+
+```bash
+# グローバル設定（project_instructions）
+ln -s $(pwd)/global_CLAUDE.md ~/.config/claude-code/project_instructions.md
+
+# グローバル設定（ignore）
+ln -s $(pwd)/global_ignore_sample.txt ~/.config/claude-code/ignore.txt
+
+# または ~/.claude/ に配置する場合
+mkdir -p ~/.claude
+ln -s $(pwd)/global_CLAUDE.md ~/.claude/CLAUDE.md
+```
+
+**注意**: シンボリックリンクを作成する前に、既存のファイルがある場合はバックアップを取ってください。
+
 #### おすすめの初期設定
 
 **~/.config/claude-code/project_instructions.md**

@@ -1,6 +1,6 @@
-# グローバル設定サンプル
+# グローバル設定
 
-このファイルは `~/.config/claude-code/project_instructions.md` または `~/.claude/CLAUDE.md` として使用できるサンプルです。
+グローバル設定として `~/.config/claude-code/project_instructions.md` または `~/.claude/CLAUDE.md` に配置するファイルです。
 
 ## 基本方針
 
