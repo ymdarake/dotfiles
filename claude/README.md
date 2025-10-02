@@ -4,23 +4,24 @@
 
 ## 初期設定
 
-### 1. `.claude/` ディレクトリの作成
+### 1. プロジェクトの初期化
 
-プロジェクトのルートディレクトリに `.claude/` ディレクトリを作成します：
+プロジェクトのルートディレクトリで Claude Code を起動：
 
 ```bash
-mkdir -p .claude
+cd /path/to/your/project
+claude
 ```
 
-### 2. 設定ファイルの配置
+Claude Code の対話モード内で以下のコマンドを実行：
 
-以下のファイルをプロジェクトの `.claude/` ディレクトリにコピーまたは作成します：
+```
+/init
+```
 
-- `project_instructions.md` - プロジェクト固有の指示
-- `ignore.txt` - Claude Codeに無視させるファイル/ディレクトリ
-- `commands/` - カスタムスラッシュコマンド（オプション）
+これで `.claude/` ディレクトリと基本的な設定ファイル（`project_instructions.md`, `ignore.txt` など）が自動生成されます。
 
-### 3. グローバル設定
+### 2. グローバル設定
 
 グローバル設定は `~/.config/claude-code/` に配置します：
 
@@ -46,7 +47,7 @@ ln -s $(pwd)/global_CLAUDE.md ~/.claude/CLAUDE.md
 
 **注意**: シンボリックリンクを作成する前に、既存のファイルがある場合はバックアップを取ってください。
 
-### 4. MCP サーバーの設定（オプション）
+### 3. MCP サーバーの設定（オプション）
 
 #### Serena MCP Server
 
