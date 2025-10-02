@@ -105,6 +105,13 @@ fi
 if ask_yes_no "Claude Code グローバル設定をセットアップしますか？"; then
     mkdir -p "$HOME/.claude"
     create_symlink "$DOTFILES_DIR/claude/global_CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+
+    if ask_yes_no "  カスタムコマンドもセットアップしますか？"; then
+        mkdir -p "$HOME/.claude/commands"
+        create_symlink "$DOTFILES_DIR/claude/commands/commit-push.md" "$HOME/.claude/commands/commit-push.md"
+        echo "  ! カスタムコマンドを有効にするにはClaude Codeセッションの再起動が必要です"
+    fi
+
     echo "  ! プロジェクトごとに /init コマンドで初期化してください"
 fi
 

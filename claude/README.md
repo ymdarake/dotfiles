@@ -136,19 +136,52 @@ npm-debug.log*
 Thumbs.db
 ```
 
-## カスタムコマンド（上級者向け）
+## カスタムコマンド
 
 `.claude/commands/` ディレクトリにMarkdownファイルを配置すると、スラッシュコマンドとして使用できます。
 
-例：`.claude/commands/review.md`
+### コマンドファイルの作成
+
+ファイル名がコマンド名になります（拡張子 `.md` を除く）。
+
+#### 基本的な形式
+
 ```markdown
-このプロジェクトのコーディング規約に沿って、現在開いているファイルをレビューしてください。
+---
+description: コマンドの説明
+---
+
+# コマンド名
+
+コマンドの詳細な説明や手順をここに記述します。
 ```
 
-使用方法：
+#### 提供しているコマンド
+
+##### `/commit-push`
+
+現在の変更を適切にコミットしてプッシュするコマンド。
+
+- gitmoji付きのコミットメッセージを作成
+- 1コミット = 1つの論理的な変更として整理
+- 関連ファイルのみを選択的にステージング
+
+詳細は [`commands/commit-push.md`](./commands/commit-push.md) を参照。
+
+### カスタムコマンドの反映
+
+このdotfilesリポジトリのコマンドを使用する場合：
+
+```bash
+# commandsディレクトリごとシンボリックリンクを作成
+ln -s $(pwd)/claude/commands ~/.claude/commands
+
+# または個別にリンク
+mkdir -p ~/.claude/commands
+ln -s $(pwd)/claude/commands/commit-push.md ~/.claude/commands/commit-push.md
 ```
-/review
-```
+
+**注意**: 新しいコマンドを追加した場合、Claude Codeセッションの再起動が必要です。
 
 ## ベストプラクティス
 
@@ -189,6 +222,9 @@ Anthropic公式では `CLAUDE.md` という名前も推奨されています。�
 - `project_CLAUDE*.md` - 言語・用途別プロジェクト設定サンプル
 - `ignore_sample.txt` / `global_ignore_sample.txt` - 無視ファイル設定
 - `settings.json.sample` - 権限設定サンプル
+
+### カスタムコマンド
+- `commands/commit-push.md` - コミット&プッシュ実行コマンド
 
 ### ガイド・テンプレート
 - `settings_guide.md` - settings.json の詳しい説明
