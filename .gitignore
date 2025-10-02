@@ -1,0 +1,41 @@
+# 秘密情報
+**/*.pem
+**/*.key
+**/id_rsa
+**/id_rsa.*
+**/id_ed25519
+**/id_ed25519.*
+**/.env
+**/.env.*
+**/credentials.*
+**/*_credentials
+**/secrets.*
+**/*.secret
+
+# ローカル設定
+**/*.local
+**/.local
+
+# OS固有
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vim/
+
+# ビルド成果物・キャッシュ
+*.log
+node_modules/
+dist/
+build/
+.cache/
