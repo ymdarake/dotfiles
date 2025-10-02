@@ -1,0 +1,28 @@
+{
+  "permissionSettings": {
+    "alwaysAllow": {
+      "Read": [
+        "**/*.ts",
+        "**/*.tsx",
+        "**/*.js",
+        "**/*.jsx",
+        "**/*.go",
+        "**/*.py",
+        "**/*.md",
+        "**/package.json",
+        "**/go.mod",
+        "**/Cargo.toml",
+        "**/README.md"
+      ],
+      "Bash": [
+        "git status:*",
+        "git diff:*",
+        "git log:*",
+        "npm run:*",
+        "npm test:*",
+        "go test:*",
+        "cargo test:*"
+      ]
+    }
+  }
+}
