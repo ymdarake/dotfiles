@@ -18,6 +18,7 @@ alias grep='grep --color=auto'
 
 # Custom commands
 alias cdpr='cd ~/workspace/projects'
+alias cdw='cd ~/workspace'
 
 alias dup='docker-compose up -d'
 alias dwn='docker-compose down'
@@ -41,3 +42,12 @@ fi
 ###############################
 
 
+######### Android #######
+alias adb='~/Library/Android/sdk/platform-tools/adb'
+#########################
+
+export PATH="$PATH:/Users/ymdarake/workspace/meta/flutter/bin"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
