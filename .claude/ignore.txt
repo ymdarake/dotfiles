@@ -1,0 +1,1 @@
+/Users/ymdarake/workspace/meta/dotfiles/claude/ignore_sample.txt
