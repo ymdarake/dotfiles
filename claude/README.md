@@ -2,6 +2,25 @@
 
 このディレクトリには、Claude Codeの設定ファイルのサンプルを配置しています。
 
+## TL;DR
+
+```bash
+# グローバル設定
+mkdir -p ~/.claude
+ln -s $(pwd)/global_CLAUDE.md ~/.claude/CLAUDE.md
+
+# カスタムコマンド
+mkdir -p ~/.claude/commands
+ln -s $(pwd)/commands/commit-push.md ~/.claude/commands/commit-push.md
+
+# 権限設定
+ln -s $(pwd)/settings.json.sample ~/.claude/settings.json
+
+# または setup.sh を使う
+cd /path/to/dotfiles
+./setup.sh
+```
+
 ## 初期設定
 
 ### 1. プロジェクトの初期化

@@ -22,7 +22,8 @@
         "npm test:*",
         "go test:*",
         "cargo test:*"
-      ]
+      ],
+      "mcp__serena__*": "*"
     }
   }
 }

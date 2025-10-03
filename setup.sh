@@ -112,6 +112,14 @@ if ask_yes_no "Claude Code グローバル設定をセットアップします�
         echo "  ! カスタムコマンドを有効にするにはClaude Codeセッションの再起動が必要です"
     fi
 
+    if ask_yes_no "  settings.json もセットアップしますか？"; then
+        if [ -f "$DOTFILES_DIR/claude/settings.json.sample" ]; then
+            create_symlink "$DOTFILES_DIR/claude/settings.json.sample" "$HOME/.claude/settings.json"
+        else
+            echo "  ⚠ claude/settings.json.sample が見つかりません"
+        fi
+    fi
+
     echo "  ! プロジェクトごとに /init コマンドで初期化してください"
 fi
 
