@@ -1,29 +1,25 @@
 {
-  "permissionSettings": {
-    "alwaysAllow": {
-      "Read": [
-        "**/*.ts",
-        "**/*.tsx",
-        "**/*.js",
-        "**/*.jsx",
-        "**/*.go",
-        "**/*.py",
-        "**/*.md",
-        "**/package.json",
-        "**/go.mod",
-        "**/Cargo.toml",
-        "**/README.md"
-      ],
-      "Bash": [
-        "git status:*",
-        "git diff:*",
-        "git log:*",
-        "npm run:*",
-        "npm test:*",
-        "go test:*",
-        "cargo test:*"
-      ],
-      "mcp__serena__*": "*"
-    }
+  "permissions": {
+    "allow": [
+      "Read(**/*.ts)",
+      "Read(**/*.tsx)",
+      "Read(**/*.js)",
+      "Read(**/*.jsx)",
+      "Read(**/*.go)",
+      "Read(**/*.py)",
+      "Read(**/*.md)",
+      "Read(**/package.json)",
+      "Read(**/go.mod)",
+      "Read(**/Cargo.toml)",
+      "Read(**/README.md)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(go test:*)",
+      "Bash(cargo test:*)",
+      "mcp__serena__*"
+    ]
   }
 }
