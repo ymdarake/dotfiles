@@ -19,7 +19,7 @@
       "Bash(npm test:*)",
       "Bash(go test:*)",
       "Bash(cargo test:*)",
-      "mcp__serena__*"
+      "mcp__serena__"
     ]
   }
 }
