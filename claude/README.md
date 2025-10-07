@@ -73,6 +73,8 @@ ln -s $(pwd)/global_CLAUDE.md ~/.claude/CLAUDE.md
 セマンティックなコード操作を提供するMCPサーバー。プロジェクトごとに以下のコマンドを実行：
 
 ```bash
+# Homebrewでuvをインストール
+brew install uv
 # プロジェクトのルートディレクトリで実行
 claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena-mcp-server --context ide-assistant --project $(pwd)
 ```
