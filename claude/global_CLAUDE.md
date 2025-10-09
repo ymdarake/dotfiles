@@ -107,6 +107,17 @@
 - ディレクトリ構造を ls や tree で確認
 - .claude/CLAUDE.md にプロジェクト固有の情報を確認
 
+## プロジェクト固有設定の優先順位
+
+- プロジェクト固有の指示は、各リポジトリのルートにある `CLAUDE.md` を最優先とする。
+- 参照順序（上から優先）:
+  1) `./CLAUDE.md`（リポジトリ直下）
+  2) `./.claude/CLAUDE.md`（プロジェクト内）
+  3) `~/.claude/CLAUDE.md`（ユーザーグローバル）
+  4) `~/.config/claude-code/project_instructions.md`（Claude Code グローバル）
+
+> グローバル方針は本ファイルに記載し、プロジェクト特有のルールやコマンドは必ずルートの `CLAUDE.md` に明示すること。
+
 ## よく使うBashコマンド
 
 ```bash

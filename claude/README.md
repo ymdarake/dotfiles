@@ -157,6 +157,17 @@ npm-debug.log*
 Thumbs.db
 ```
 
+### プロジェクトごとの参照先（重要）
+
+- @claude は「プロジェクトルートの `CLAUDE.md`」を最優先で参照してください。
+- 推奨の参照順序（上から優先）:
+  1) `./CLAUDE.md`（リポジトリ直下）
+  2) `./.claude/CLAUDE.md`（プロジェクト内）
+  3) `~/.claude/CLAUDE.md`（ユーザーグローバル）
+  4) `~/.config/claude-code/project_instructions.md`（Claude Code グローバル）
+
+プロジェクト固有の指示は、まずリポジトリ直下の `CLAUDE.md` に記載し、必要に応じて `.claude/` 配下に詳細を分割してください。
+
 ## カスタムコマンド
 
 `.claude/commands/` ディレクトリにMarkdownファイルを配置すると、スラッシュコマンドとして使用できます。
