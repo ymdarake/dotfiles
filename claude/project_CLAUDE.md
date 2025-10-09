@@ -1,6 +1,6 @@
 # プロジェクト設定
 
-プロジェクト固有の設定として `.claude/project_instructions.md` または `.claude/CLAUDE.md` に配置するファイルです。
+プロジェクト固有の設定として `CLAUDE.md` に配置するファイルです。
 
 ## このプロジェクトについて
 
