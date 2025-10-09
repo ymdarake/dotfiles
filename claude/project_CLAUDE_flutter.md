@@ -87,4 +87,43 @@ dart format lib/               # コードフォーマット
 
 ---
 
-*参考: [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)*
+## アーキテクチャ指針（Flutter）
+
+- 目的: Widget をシンプルにし、データ操作を UseCase へ集約。保存先（SharedPreferences/Isar/HTTP/Memory）を差し替え可能に。
+- レイヤ構成:
+  - Presentation（Widget/StateNotifier/BLoC/Cubit）
+    - ↓ Application（UseCase）
+      - ↓ Domain（Repository 抽象/Entity/Value）
+        - ↓ Infrastructure（具体実装: SharedPreferences/Isar/HTTP/Memory）
+- Riverpod（または get_it）で Composition Root に依存を束ね、Provider で注入。
+- Contract Test（Repository 抽象）→ UseCase Test（Clock 固定）→ Widget Test（Provider オーバーライド）の順で担保。
+
+## ディレクトリ構造（例）
+
+```
+lib/
+  presentation/                 // Widget/Route/State管理（Riverpod/BLoC等）
+    pages/
+    widgets/
+    providers/
+  application/                  // UseCase
+    usecase/
+      save_score.dart
+      load_rankings.dart
+  domain/                       // 抽象・モデル
+    ranking/
+      ranking_entry.dart
+      ranking_repository.dart   // 抽象
+      types.dart
+  infrastructure/               // 具体実装
+    ranking/
+      shared_prefs/
+        ranking_repository.dart
+      http/
+        ranking_repository.dart
+      memory/
+        ranking_repository.dart
+  shared/
+    clock.dart
+  main.dart                     // Composition Root（Provider束ね）
+```

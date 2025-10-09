@@ -80,4 +80,47 @@ type MyError struct {
 
 ---
 
+## アーキテクチャ指針（Go）
+
+- 目的: Handler（入出力）からデータ操作を分離しテスト容易性を向上。保存方法（DB/FS/HTTP/Memory）の差し替えを容易に。
+- レイヤ構成:
+  - Interface Adapter（HTTP/CLI 等）
+    - ↓ Application（UseCase）
+      - ↓ Domain（Repository 抽象/Entity/Value）
+        - ↓ Infrastructure（具体: DB/FS/HTTP/Memory）
+- Composition Root（起動点）で具体 Repository と Clock 等の依存を生成・注入。
+- Contract Test（抽象に対する InMemory/実装の同一性）→ UseCase Test（Clock 固定）→ Handler テストの順で担保。
+
 *参考: [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)*
+
+## ディレクトリ構造（例）
+
+```
+cmd/app/                        # エントリポイント（main）
+internal/
+  interface/                   # ハンドラ/CLI等の入出力境界
+    http/
+      handler.go
+    cli/
+      command.go
+  application/                 # UseCase
+    usecase/
+      save_score.go
+      load_rankings.go
+  domain/                      # 抽象・モデル
+    ranking/
+      entity.go
+      repository.go           # interface RankingRepository
+      types.go
+  infrastructure/              # 具体実装
+    ranking/
+      memory/
+        repository.go
+      file/
+        repository.go
+      db/
+        repository.go
+shared/
+  clock/
+    clock.go
+```
