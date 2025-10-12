@@ -130,6 +130,70 @@ app-project:
   - roles/storage.objectViewer (State読み取り用)
 ```
 
+#### バケットの推奨設定（GCS）
+
+バージョニングやアクセス制御を有効化し、Stateの安全性を高める。
+
+```bash
+# バージョニングを有効化（履歴保持）
+gsutil versioning set on gs://terraform-state-bucket
+
+# Retention Policy（必要に応じて）
+gsutil retention set 30d gs://terraform-state-bucket
+
+# バケットレベルの一元アクセス制御
+gsutil uniformbucketlevelaccess set on gs://terraform-state-bucket
+
+# 必要に応じてCMEKを使用（コンプライアンス要件等）
+# KMSキー作成と関連付けは組織の規約に従う
+```
+
+#### バージョン固定（Pinning）
+
+Terraform本体・プロバイダーのバージョンを固定し、再現性を担保する。
+
+```hcl
+terraform {
+  required_version = "~> 1.8.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+```
+
+#### 権限設計（IAM）
+
+- 最小権限の原則（Principle of Least Privilege）を遵守。
+- CI用Service AccountにはState操作と必要リソース操作のみを付与。
+- prefix単位の厳格な分離が必要な場合は、アプリごとにバケット分割も検討。
+
+例（方針の一例、実際の権限は組織基準に従う）:
+
+```yaml
+# State管理プロジェクト（最小限）
+terraform-state-project:
+  - roles/storage.objectAdmin  # State操作用（必要に応じて更に絞る）
+
+# 本番プロジェクト（リソース操作に必要な最小権限）
+app-project:
+  - roles/compute.admin
+  - roles/storage.objectViewer # State読み取りが必要な場合のみ
+```
+
+#### 併走制御（Concurrency）
+
+- applyはCIで直列実行（環境・ディレクトリごとにジョブを直列化）。
+- PRでは `terraform plan -detailed-exitcode` を使用し、差分有無でゲート。
+
+#### セキュリティ / 運用
+
+- tfvarsに秘密情報を含めない。Secret ManagerやCIの変数管理を使用。
+- 静的解析の導入を推奨（tflint, tfsec, trivy など）。
+- 自動フォーマット（terraform fmt）とvalidateをCIに組み込み。
+
 ### 変数定義
 
 ```hcl
