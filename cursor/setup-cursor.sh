@@ -94,10 +94,17 @@ copy_directory() {
 # Cursor設定のコピー
 if ask_yes_no "Cursor設定をコピーしますか？ (.cursor/, mcp.json)"; then
     # .cursor ディレクトリ全体をコピー
-    copy_directory "$SCRIPT_DIR" "$PROJECT_DIR/.cursor" "Cursor設定"
+    mkdir -p "$PROJECT_DIR/.cursor"
     
-    # mcp.json をプロジェクトルートにコピー
-    copy_file "$SCRIPT_DIR/mcp.json" "$PROJECT_DIR/mcp.json" "MCP設定"
+    # rulesディレクトリをコピー
+    if [ -d "$SCRIPT_DIR/rules" ]; then
+        copy_directory "$SCRIPT_DIR/rules" "$PROJECT_DIR/.cursor/rules" "開発ガイドライン"
+    fi
+    
+    # mcp.jsonをコピー
+    if [ -f "$SCRIPT_DIR/mcp.json" ]; then
+        copy_file "$SCRIPT_DIR/mcp.json" "$PROJECT_DIR/mcp.json" "MCP設定"
+    fi
 fi
 
 
