@@ -100,24 +100,6 @@ if ask_yes_no "Cursor設定をコピーしますか？ (.cursor/, mcp.json)"; th
     copy_file "$SCRIPT_DIR/mcp.json" "$PROJECT_DIR/mcp.json" "MCP設定"
 fi
 
-# Git設定の追加
-if ask_yes_no ".gitignore に Cursor 設定を追加しますか？"; then
-    GITIGNORE_FILE="$PROJECT_DIR/.gitignore"
-    
-    if [ ! -f "$GITIGNORE_FILE" ]; then
-        touch "$GITIGNORE_FILE"
-    fi
-    
-    # Cursor設定が既に.gitignoreに含まれているかチェック
-    if ! grep -q "\.cursor/" "$GITIGNORE_FILE"; then
-        echo "" >> "$GITIGNORE_FILE"
-        echo "# Cursor設定" >> "$GITIGNORE_FILE"
-        echo ".cursor/" >> "$GITIGNORE_FILE"
-        echo "  ✓ .gitignore に Cursor設定を追加"
-    else
-        echo "  ⚠ .gitignore に既に Cursor設定が含まれています"
-    fi
-fi
 
 echo ""
 echo "======================================"
