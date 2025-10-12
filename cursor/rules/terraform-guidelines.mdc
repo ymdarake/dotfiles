@@ -80,6 +80,56 @@ terraform apply -var-file="environments/prod.tfvars"
 
 ## ベストプラクティス
 
+### State管理
+
+#### 推奨構成（専用プロジェクト方式）
+
+```
+terraform-state-project (独立・State管理専用)
+├── terraform-state-bucket
+│   ├── app-project-dev/
+│   ├── app-project-staging/
+│   └── app-project-prod/
+
+app-project (独立・アプリケーション専用)
+├── dev/
+├── staging/
+└── prod/
+```
+
+**関係性**: app-projectのStateファイルをterraform-state-projectのバケットに保存
+
+#### backend.tf 設定例
+
+```hcl
+terraform {
+  backend "gcs" {
+    bucket = "terraform-state-bucket"
+    prefix = "app-project"
+  }
+}
+```
+
+#### メリット
+
+- **セキュリティ**: Stateとリソースを分離
+- **権限管理**: State管理専用のIAM設定
+- **災害復旧**: Stateの独立バックアップ
+- **監査**: State操作の独立ログ
+
+#### IAM設定例
+
+```yaml
+# State管理プロジェクト
+terraform-state-project:
+  - roles/storage.objectAdmin (State管理用)
+  
+# 本番プロジェクト  
+app-project:
+  - roles/compute.admin (リソース管理用)
+  - roles/storage.objectViewer (State読み取り用)
+```
+
 ### 変数定義
 
 ```hcl
