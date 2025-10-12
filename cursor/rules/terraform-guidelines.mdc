@@ -25,58 +25,48 @@ terraform workspace list   # ワークスペース一覧
 terraform workspace select <name>  # ワークスペース切り替え
 ```
 
-## 環境ごとの実行方法
+## 環境ごとの実行方法（Workspace使用）
 
 ```bash
+# ワークスペース作成
+terraform workspace new dev
+terraform workspace new staging
+terraform workspace new prod
+
 # 開発環境で実行
-cd environments/dev
-terraform init
-terraform plan
-terraform apply
+terraform workspace select dev
+terraform plan -var-file="environments/dev.tfvars"
+terraform apply -var-file="environments/dev.tfvars"
 
 # ステージング環境で実行
-cd environments/staging
-terraform init
-terraform plan
-terraform apply
+terraform workspace select staging
+terraform plan -var-file="environments/staging.tfvars"
+terraform apply -var-file="environments/staging.tfvars"
 
 # 本番環境で実行
-cd environments/prod
-terraform init
-terraform plan
-terraform apply
+terraform workspace select prod
+terraform plan -var-file="environments/prod.tfvars"
+terraform apply -var-file="environments/prod.tfvars"
 ```
 
 ## プロジェクト構成
 
 ```
 .
+├── main.tf           # メインの設定
+├── variables.tf      # 変数定義
+├── outputs.tf        # Output定義
+├── versions.tf       # Terraformバージョン・プロバイダー定義
+├── terraform.tfvars  # デフォルトの変数値
+├── backend.tf        # バックエンド設定（S3等）
 ├── modules/          # 再利用可能なモジュール
 │   ├── vpc/
 │   ├── ec2/
 │   └── rds/
-└── environments/     # 環境ごとの設定
-    ├── dev/
-    │   ├── main.tf           # メインの設定
-    │   ├── variables.tf      # 変数定義
-    │   ├── outputs.tf        # Output定義
-    │   ├── versions.tf       # Terraformバージョン・プロバイダー定義
-    │   ├── terraform.tfvars  # 変数の値
-    │   └── backend.tf        # バックエンド設定（S3等）
-    ├── staging/
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   ├── outputs.tf
-    │   ├── versions.tf
-    │   ├── terraform.tfvars
-    │   └── backend.tf
-    └── prod/
-        ├── main.tf
-        ├── variables.tf
-        ├── outputs.tf
-        ├── versions.tf
-        ├── terraform.tfvars
-        └── backend.tf
+└── environments/     # 環境ごとの変数ファイル
+    ├── dev.tfvars
+    ├── staging.tfvars
+    └── prod.tfvars
 ```
 
 ## コーディングスタイル
