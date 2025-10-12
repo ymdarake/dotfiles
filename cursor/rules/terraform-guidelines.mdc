@@ -1,0 +1,408 @@
+# Terraform プロジェクトガイドライン
+
+Terraformプロジェクト用の詳細な開発ガイドラインです。
+
+## 技術スタック
+
+- **IaC**: Terraform
+- **クラウドプロバイダー**: (例: AWS, GCP, Azure など)
+- **その他**: (例: バックエンドストレージ、CI/CDツール など)
+
+## Bashコマンド
+
+```bash
+terraform init             # 初期化（プロバイダーダウンロード）
+terraform plan             # 実行計画を確認
+terraform apply            # インフラをプロビジョニング
+terraform apply -auto-approve  # 確認なしで適用
+terraform destroy          # リソースを削除
+terraform fmt              # コードフォーマット
+terraform validate         # 構文チェック
+terraform state list       # 管理中のリソース一覧
+terraform state show <resource>  # リソース詳細表示
+terraform output           # Output変数を表示
+terraform workspace list   # ワークスペース一覧
+terraform workspace select <name>  # ワークスペース切り替え
+```
+
+## プロジェクト構成
+
+```
+.
+├── main.tf           # メインの設定
+├── variables.tf      # 変数定義
+├── outputs.tf        # Output定義
+├── versions.tf       # Terraformバージョン・プロバイダー定義
+├── terraform.tfvars  # 変数の値（環境ごと）
+├── backend.tf        # バックエンド設定（S3等）
+├── modules/          # 再利用可能なモジュール
+│   ├── vpc/
+│   ├── ec2/
+│   └── rds/
+└── environments/     # 環境ごとの設定
+    ├── dev/
+    ├── staging/
+    └── prod/
+```
+
+## コーディングスタイル
+
+- リソース名: snake_case
+- 変数名: snake_case
+- モジュール名: kebab-case
+- インデント: スペース2つ
+- `terraform fmt` でフォーマット必須
+- 1ファイルは300行以内を目安
+
+## ベストプラクティス
+
+### 変数定義
+
+```hcl
+variable "environment" {
+  description = "環境名（dev, staging, prod）"
+  type        = string
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "環境名はdev, staging, prodのいずれかである必要があります"
+  }
+}
+
+variable "instance_count" {
+  description = "インスタンス数"
+  type        = number
+  default     = 1
+  validation {
+    condition     = var.instance_count > 0
+    error_message = "インスタンス数は1以上である必要があります"
+  }
+}
+```
+
+### リソースの命名規則
+
+```hcl
+resource "aws_instance" "web_server" {
+  # ${環境}_${用途}_${リソース種別}
+  tags = {
+    Name        = "${var.environment}-web-server"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
+  }
+}
+```
+
+### モジュール化
+
+- 再利用可能な構成はモジュール化
+- モジュールには README.md を用意
+- Input/Output を明確に定義
+
+#### モジュール例
+
+```hcl
+# modules/vpc/main.tf
+variable "vpc_cidr" {
+  description = "VPCのCIDRブロック"
+  type        = string
+}
+
+variable "environment" {
+  description = "環境名"
+  type        = string
+}
+
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name        = "${var.environment}-vpc"
+    Environment = var.environment
+  }
+}
+
+output "vpc_id" {
+  description = "VPCのID"
+  value       = aws_vpc.main.id
+}
+
+output "vpc_cidr_block" {
+  description = "VPCのCIDRブロック"
+  value       = aws_vpc.main.cidr_block
+}
+```
+
+#### モジュールの使用
+
+```hcl
+# main.tf
+module "vpc" {
+  source = "./modules/vpc"
+
+  vpc_cidr    = "10.0.0.0/16"
+  environment = var.environment
+}
+
+resource "aws_subnet" "public" {
+  vpc_id     = module.vpc.vpc_id
+  cidr_block = "10.0.1.0/24"
+  # ...
+}
+```
+
+## セキュリティ
+
+- **秘密情報をコードに直接書かない**
+- 認証情報は環境変数または AWS/GCP の認証機構を使用
+- `.tfvars` ファイルは `.gitignore` に追加
+- `terraform.tfstate` は Git にコミットしない（リモートバックエンド使用）
+- センシティブな変数には `sensitive = true` を設定
+
+```hcl
+variable "db_password" {
+  description = "データベースパスワード"
+  type        = string
+  sensitive   = true
+}
+
+resource "aws_db_instance" "main" {
+  # ...
+  password = var.db_password
+}
+
+output "db_endpoint" {
+  description = "データベースエンドポイント"
+  value       = aws_db_instance.main.endpoint
+  sensitive   = true
+}
+```
+
+## State管理
+
+- リモートバックエンド（S3 + DynamoDB）を使用
+- State ロックを有効化
+- 環境ごとにワークスペースまたは別バックエンドを使用
+
+### バックエンド設定例
+
+```hcl
+# backend.tf
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-state-bucket"
+    key            = "terraform.tfstate"
+    region         = "ap-northeast-1"
+    dynamodb_table = "terraform-state-lock"
+    encrypt        = true
+  }
+}
+```
+
+### ワークスペースの使用
+
+```bash
+# 環境ごとのワークスペース作成
+terraform workspace new dev
+terraform workspace new staging
+terraform workspace new prod
+
+# ワークスペース切り替え
+terraform workspace select dev
+
+# 現在のワークスペース確認
+terraform workspace show
+```
+
+## テスト・検証
+
+- `terraform plan` で変更内容を必ず確認
+- `terraform validate` で構文チェック
+- Terratest や kitchen-terraform でテスト（推奨）
+- Checkov / tfsec でセキュリティスキャン
+
+### Terratest の例
+
+```go
+package test
+
+import (
+    "testing"
+    "github.com/gruntwork-io/terratest/modules/terraform"
+    "github.com/stretchr/testify/assert"
+)
+
+func TestTerraformAwsExample(t *testing.T) {
+    terraformOptions := &terraform.Options{
+        TerraformDir: "../",
+        VarFiles:     []string{"terraform.tfvars"},
+    }
+
+    defer terraform.Destroy(t, terraformOptions)
+    terraform.InitAndApply(t, terraformOptions)
+
+    instanceId := terraform.Output(t, terraformOptions, "instance_id")
+    assert.NotEmpty(t, instanceId)
+}
+```
+
+## 環境管理
+
+### 環境ごとの設定
+
+```hcl
+# environments/dev/terraform.tfvars
+environment = "dev"
+instance_count = 1
+instance_type = "t3.micro"
+
+# environments/prod/terraform.tfvars
+environment = "prod"
+instance_count = 3
+instance_type = "t3.large"
+```
+
+### 環境固有のリソース
+
+```hcl
+# 環境によって異なるリソースを作成
+resource "aws_instance" "web" {
+  count = var.environment == "prod" ? 3 : 1
+  
+  ami           = var.ami_id
+  instance_type = var.instance_type
+  
+  tags = {
+    Name        = "${var.environment}-web-${count.index + 1}"
+    Environment = var.environment
+  }
+}
+```
+
+## データソースの活用
+
+```hcl
+# 既存のリソースを参照
+data "aws_vpc" "existing" {
+  filter {
+    name   = "tag:Name"
+    values = ["existing-vpc"]
+  }
+}
+
+data "aws_subnets" "existing" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.existing.id]
+  }
+}
+
+resource "aws_instance" "web" {
+  subnet_id = data.aws_subnets.existing.ids[0]
+  # ...
+}
+```
+
+## 条件分岐とループ
+
+### 条件分岐
+
+```hcl
+resource "aws_instance" "web" {
+  count = var.create_instance ? 1 : 0
+  
+  ami           = var.ami_id
+  instance_type = var.instance_type
+  
+  tags = {
+    Name = var.create_instance ? "web-server" : "disabled"
+  }
+}
+```
+
+### ループ
+
+```hcl
+variable "subnet_cidrs" {
+  description = "サブネットのCIDRブロック"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+}
+
+resource "aws_subnet" "private" {
+  count = length(var.subnet_cidrs)
+  
+  vpc_id     = aws_vpc.main.id
+  cidr_block = var.subnet_cidrs[count.index]
+  
+  tags = {
+    Name = "private-subnet-${count.index + 1}"
+  }
+}
+```
+
+## エラーハンドリングと検証
+
+```hcl
+variable "port" {
+  description = "ポート番号"
+  type        = number
+  default     = 80
+  
+  validation {
+    condition     = var.port > 0 && var.port <= 65535
+    error_message = "ポート番号は1-65535の範囲である必要があります"
+  }
+}
+
+resource "aws_security_group" "web" {
+  name_prefix = "web-"
+  
+  ingress {
+    from_port   = var.port
+    to_port     = var.port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+```
+
+## Git運用
+
+- `terraform apply` 前に必ず `plan` を確認
+- 本番環境への適用は慎重に
+- PR には `terraform plan` の出力を添付
+- インフラ変更は小さく頻繁に
+
+### CI/CD パイプライン例
+
+```yaml
+# .github/workflows/terraform.yml
+name: Terraform
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+      - name: Terraform Format Check
+        run: terraform fmt -check
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Validate
+        run: terraform validate
+      - name: Terraform Plan
+        run: terraform plan
+```
+
+---
+
+*参考: [Terraform公式ドキュメント](https://www.terraform.io/docs/), [Terraform Best Practices](https://www.terraform-best-practices.com/)*

@@ -1,0 +1,521 @@
+# TypeScript プロジェクトガイドライン
+
+TypeScriptプロジェクト用の詳細な開発ガイドラインです。
+
+## 技術スタック
+
+- **言語**: TypeScript
+- **フレームワーク**: (例: Node.js, Express, NestJS など)
+- **その他**: (例: ESLint, Prettier, Jest など)
+
+## Bashコマンド
+
+```bash
+npm install              # 依存関係インストール
+npm run dev              # 開発サーバー起動
+npm run build            # プロダクションビルド
+npm run test             # テスト実行
+npm run test:watch       # ウォッチモードでテスト実行
+npm run lint             # Lint実行
+npm run lint:fix         # Lint自動修正
+npm run type-check       # 型チェック実行
+npm run format           # コードフォーマット
+```
+
+## プロジェクト構成
+
+```
+src/
+├── controllers/         # コントローラー層
+├── services/           # ビジネスロジック層
+├── repositories/      # データアクセス層
+├── models/            # データモデル
+├── types/             # 型定義
+├── utils/             # ユーティリティ関数
+├── middleware/         # ミドルウェア
+├── config/            # 設定ファイル
+└── index.ts           # エントリーポイント
+
+tests/
+├── unit/              # ユニットテスト
+├── integration/       # 統合テスト
+└── fixtures/         # テストデータ
+
+package.json
+tsconfig.json
+.eslintrc.js
+.prettierrc
+```
+
+## TypeScript 固有のベストプラクティス
+
+### 型定義
+
+```typescript
+// インターフェースでオブジェクトの型を定義
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: Date;
+  isActive?: boolean; // オプショナルプロパティ
+}
+
+// 型エイリアスで複雑な型を定義
+type UserRole = 'admin' | 'user' | 'guest';
+type UserWithRole = User & { role: UserRole };
+
+// ジェネリクスで再利用可能な型を定義
+interface Repository<T> {
+  findById(id: number): Promise<T | null>;
+  save(entity: T): Promise<T>;
+  delete(id: number): Promise<void>;
+}
+```
+
+### 関数の型定義
+
+```typescript
+// 関数の型定義
+type EventHandler = (event: Event) => void;
+type AsyncHandler<T> = (data: T) => Promise<void>;
+
+// 関数オーバーロード
+function processData(data: string): string;
+function processData(data: number): number;
+function processData(data: string | number): string | number {
+  if (typeof data === 'string') {
+    return data.toUpperCase();
+  }
+  return data * 2;
+}
+
+// 高階関数の型定義
+type Middleware = (req: Request, res: Response, next: NextFunction) => void;
+type AsyncMiddleware = (req: Request, res: Response, next: NextFunction) => Promise<void>;
+```
+
+### クラス設計
+
+```typescript
+// 抽象クラス
+abstract class BaseRepository<T> {
+  abstract findById(id: number): Promise<T | null>;
+  
+  protected validateId(id: number): void {
+    if (id <= 0) {
+      throw new Error('Invalid ID');
+    }
+  }
+}
+
+// 具象クラス
+class UserRepository extends BaseRepository<User> {
+  async findById(id: number): Promise<User | null> {
+    this.validateId(id);
+    // 実装
+    return null;
+  }
+}
+
+// インターフェースの実装
+interface Serializable {
+  serialize(): string;
+}
+
+class User implements Serializable {
+  constructor(
+    public id: number,
+    public name: string,
+    public email: string
+  ) {}
+
+  serialize(): string {
+    return JSON.stringify({
+      id: this.id,
+      name: this.name,
+      email: this.email
+    });
+  }
+}
+```
+
+### エラーハンドリング
+
+```typescript
+// カスタムエラークラス
+class AppError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number = 500,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+}
+
+class ValidationError extends AppError {
+  constructor(message: string, public field?: string) {
+    super(message, 400, 'VALIDATION_ERROR');
+    this.name = 'ValidationError';
+  }
+}
+
+// エラーハンドリングの実装
+async function createUser(userData: CreateUserData): Promise<User> {
+  try {
+    const user = await userRepository.save(userData);
+    return user;
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+    throw new AppError('Failed to create user', 500);
+  }
+}
+```
+
+### 非同期処理
+
+```typescript
+// Promise の適切な使用
+async function fetchUserData(userId: number): Promise<UserData> {
+  try {
+    const [user, profile, settings] = await Promise.all([
+      userService.findById(userId),
+      profileService.findByUserId(userId),
+      settingsService.findByUserId(userId)
+    ]);
+
+    return {
+      user,
+      profile,
+      settings
+    };
+  } catch (error) {
+    console.error('Failed to fetch user data:', error);
+    throw new AppError('Failed to fetch user data');
+  }
+}
+
+// 並列処理の制御
+async function processUsers(users: User[]): Promise<ProcessedUser[]> {
+  const BATCH_SIZE = 10;
+  const results: ProcessedUser[] = [];
+
+  for (let i = 0; i < users.length; i += BATCH_SIZE) {
+    const batch = users.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(user => processUser(user))
+    );
+    results.push(...batchResults);
+  }
+
+  return results;
+}
+```
+
+## テスト
+
+### テストライブラリ
+
+- **Jest** を推奨
+- **@types/jest** で型サポート
+- **supertest** でHTTPテスト
+- **ts-jest** でTypeScriptサポート
+
+### テストの書き方
+
+```typescript
+// ユニットテスト
+describe('UserService', () => {
+  let userService: UserService;
+  let mockRepository: jest.Mocked<UserRepository>;
+
+  beforeEach(() => {
+    mockRepository = {
+      findById: jest.fn(),
+      save: jest.fn(),
+      delete: jest.fn()
+    } as jest.Mocked<UserRepository>;
+
+    userService = new UserService(mockRepository);
+  });
+
+  describe('findById', () => {
+    it('should return user when found', async () => {
+      const mockUser: User = {
+        id: 1,
+        name: 'Test User',
+        email: 'test@example.com',
+        createdAt: new Date()
+      };
+
+      mockRepository.findById.mockResolvedValue(mockUser);
+
+      const result = await userService.findById(1);
+
+      expect(result).toEqual(mockUser);
+      expect(mockRepository.findById).toHaveBeenCalledWith(1);
+    });
+
+    it('should throw error when user not found', async () => {
+      mockRepository.findById.mockResolvedValue(null);
+
+      await expect(userService.findById(999)).rejects.toThrow('User not found');
+    });
+  });
+});
+```
+
+### モックの実装
+
+```typescript
+// モックファクトリー
+export function createMockUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 1,
+    name: 'Test User',
+    email: 'test@example.com',
+    createdAt: new Date(),
+    isActive: true,
+    ...overrides
+  };
+}
+
+// スパイの使用
+describe('UserController', () => {
+  it('should create user', async () => {
+    const mockUser = createMockUser();
+    const createUserSpy = jest.spyOn(userService, 'createUser')
+      .mockResolvedValue(mockUser);
+
+    const result = await userController.createUser({
+      name: 'Test User',
+      email: 'test@example.com'
+    });
+
+    expect(createUserSpy).toHaveBeenCalledWith({
+      name: 'Test User',
+      email: 'test@example.com'
+    });
+    expect(result).toEqual(mockUser);
+  });
+});
+```
+
+## 設定ファイル
+
+### tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
+}
+```
+
+### ESLint設定
+
+```javascript
+// .eslintrc.js
+module.exports = {
+  parser: '@typescript-eslint/parser',
+  plugins: ['@typescript-eslint'],
+  extends: [
+    'eslint:recommended',
+    '@typescript-eslint/recommended',
+    '@typescript-eslint/recommended-requiring-type-checking'
+  ],
+  parserOptions: {
+    ecmaVersion: 2020,
+    sourceType: 'module',
+    project: './tsconfig.json'
+  },
+  rules: {
+    '@typescript-eslint/no-unused-vars': 'error',
+    '@typescript-eslint/explicit-function-return-type': 'warn',
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/prefer-const': 'error'
+  }
+};
+```
+
+## パフォーマンス
+
+### メモリ効率
+
+```typescript
+// 大きな配列の処理
+function processLargeArray<T>(items: T[]): T[] {
+  const result: T[] = [];
+  
+  for (const item of items) {
+    if (shouldInclude(item)) {
+      result.push(transform(item));
+    }
+  }
+  
+  return result;
+}
+
+// ストリーム処理
+import { Readable } from 'stream';
+
+function createDataStream(): Readable {
+  return new Readable({
+    objectMode: true,
+    read() {
+      // データを生成してプッシュ
+      const data = generateData();
+      this.push(data);
+    }
+  });
+}
+```
+
+### キャッシュ
+
+```typescript
+// シンプルなキャッシュ
+class Cache<T> {
+  private cache = new Map<string, { value: T; expiry: number }>();
+
+  set(key: string, value: T, ttl: number = 60000): void {
+    this.cache.set(key, {
+      value,
+      expiry: Date.now() + ttl
+    });
+  }
+
+  get(key: string): T | null {
+    const item = this.cache.get(key);
+    if (!item) return null;
+
+    if (Date.now() > item.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return item.value;
+  }
+}
+```
+
+## セキュリティ
+
+```typescript
+// 入力値の検証
+import Joi from 'joi';
+
+const userSchema = Joi.object({
+  name: Joi.string().min(1).max(100).required(),
+  email: Joi.string().email().required(),
+  age: Joi.number().min(0).max(150).optional()
+});
+
+function validateUser(data: unknown): User {
+  const { error, value } = userSchema.validate(data);
+  if (error) {
+    throw new ValidationError(error.details[0].message);
+  }
+  return value;
+}
+
+// パスワードハッシュ化
+import bcrypt from 'bcrypt';
+
+async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 12;
+  return bcrypt.hash(password, saltRounds);
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+```
+
+## ログとモニタリング
+
+```typescript
+// 構造化ログ
+interface LogContext {
+  requestId?: string;
+  userId?: number;
+  action?: string;
+}
+
+class Logger {
+  info(message: string, context: LogContext = {}): void {
+    console.log(JSON.stringify({
+      level: 'info',
+      message,
+      timestamp: new Date().toISOString(),
+      ...context
+    }));
+  }
+
+  error(message: string, error?: Error, context: LogContext = {}): void {
+    console.error(JSON.stringify({
+      level: 'error',
+      message,
+      error: error?.message,
+      stack: error?.stack,
+      timestamp: new Date().toISOString(),
+      ...context
+    }));
+  }
+}
+
+// 使用例
+const logger = new Logger();
+
+async function createUser(userData: CreateUserData): Promise<User> {
+  const requestId = generateRequestId();
+  
+  logger.info('Creating user', { requestId, action: 'createUser' });
+  
+  try {
+    const user = await userService.create(userData);
+    logger.info('User created successfully', { 
+      requestId, 
+      userId: user.id,
+      action: 'createUser' 
+    });
+    return user;
+  } catch (error) {
+    logger.error('Failed to create user', error as Error, { 
+      requestId, 
+      action: 'createUser' 
+    });
+    throw error;
+  }
+}
+```
+
+---
+
+*参考: [TypeScript公式ドキュメント](https://www.typescriptlang.org/docs/), [TypeScript Deep Dive](https://basarat.gitbook.io/typescript/)*

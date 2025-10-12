@@ -1,0 +1,224 @@
+# React プロジェクトガイドライン
+
+React プロジェクト用の詳細な開発ガイドラインです。
+
+## 技術スタック
+
+- **言語**: TypeScript
+- **フレームワーク**: React
+- **状態管理/データ取得**: Context / Custom Hooks / （必要に応じて）React Query/SWR
+- **その他**: （例: Vite/Next.js、ESLint、Prettier）
+
+## データアーキテクチャ（Repository / UseCase / Context / Hook）
+
+目的:
+- UI とデータ操作の分離（疎結合）
+- Repository の差し替え（LocalStorage → API 等）
+- 日付付与・整形・検証などを UseCase に集約（ポリシー一元化）
+
+### レイヤ構成（依存方向）
+- UI Component（React Component）
+  - ↓ Hook（例: `useRanking`）
+    - ↓ Context（DI された Repository へのアクセスポイント）
+      - ↓ UseCase（ビジネスアプリケーション操作・薄い）
+        - ↓ Repository（データ操作の抽象；Domain インターフェイス）
+          - ↓ Infrastructure（LocalStorage など具体実装）
+
+依存は上から下へ一方向。UI は具体 Repository を知らず、Context/Hook を介して抽象に触れます。
+
+### 主要インターフェイス（概念）
+```ts
+export interface RankingRepository {
+  getRankings(difficulty?: Difficulty): Promise<RankingEntry[]>;
+  saveRanking(newEntry: RankingEntry, difficulty?: Difficulty): Promise<RankingEntry[]>;
+}
+```
+
+### UseCase（薄い手続き）
+- `SaveScoreUseCase`: Clock で日時を付与し、Repository に委譲
+- `LoadRankingsUseCase`: 取得を委譲し、UI 非依存に保つ
+
+### Context と Hook
+- Context: 具体 Repository を Composition Root で生成し Provider で注入
+- Hook: 取得/キャッシュ/ローディング制御を再利用可能にまとめる（`useRanking` など）
+
+### Composition Root（例）
+- `index.tsx` で `new LocalStorageRankingRepository()` を生成し Provider に渡す
+- 将来 API 実装へ差し替えても UI の変更は最小限
+
+### テスト戦略
+1) Contract Test: Repository 抽象に対し InMemory/LocalStorage 実装の同一性を検証
+2) UseCase Test: Clock 固定で副作用（日時付与/整形）を検証
+3) Hook Test: Provider で Stub Repository を注入し、ローディング/エラー/キャッシュを検証
+4) Component Test: Hook の結果レンダリングを確認
+
+### ディレクトリ例
+```
+src/
+  domain/
+    ranking/
+      RankingRepository.ts
+      types.ts
+  repository/
+    localstorage/
+    memory/
+  usecase/
+    saveScore.ts
+    loadRankings.ts
+  context/
+    RankingRepositoryContext.tsx
+  hooks/
+    useRanking.ts
+  app/
+    index.tsx
+```
+
+### ポイント
+- View は UseCase を直接呼ぶか Hook 経由で利用し、Repository 具体型を知らない
+- 仕様変更や実装差し替えの影響を UseCase 境界内に局所化
+- 観測（メトリクス/監査ログ）は UseCase に集約
+
+## React 固有のベストプラクティス
+
+### コンポーネント設計
+
+- **関数コンポーネント**を優先使用
+- **カスタムフック**でロジックを分離
+- **Props**は`interface`で型定義
+- **デフォルトProps**は引数のデフォルト値で定義
+
+```tsx
+interface ButtonProps {
+  children: React.ReactNode;
+  variant?: 'primary' | 'secondary';
+  onClick?: () => void;
+}
+
+const Button: React.FC<ButtonProps> = ({ 
+  children, 
+  variant = 'primary', 
+  onClick 
+}) => {
+  return (
+    <button 
+      className={`btn btn-${variant}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+};
+```
+
+### 状態管理
+
+- **useState**でローカル状態
+- **useContext**でグローバル状態
+- **useReducer**で複雑な状態ロジック
+- **カスタムフック**で状態ロジックを分離
+
+### パフォーマンス最適化
+
+- **React.memo**で不要な再レンダリングを防止
+- **useMemo**で重い計算をメモ化
+- **useCallback**で関数の再生成を防止
+- **React.lazy**でコード分割
+
+```tsx
+const ExpensiveComponent = React.memo(({ data }: { data: Data[] }) => {
+  const processedData = useMemo(() => {
+    return data.map(item => heavyProcessing(item));
+  }, [data]);
+
+  const handleClick = useCallback(() => {
+    // 処理
+  }, []);
+
+  return <div>{/* レンダリング */}</div>;
+});
+```
+
+### エラーハンドリング
+
+- **Error Boundary**でコンポーネントツリーのエラーをキャッチ
+- **try-catch**で非同期処理のエラーを処理
+- **エラー状態**を適切に管理
+
+```tsx
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <h1>Something went wrong.</h1>;
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+## テスト
+
+### テストライブラリ
+
+- **Jest** + **React Testing Library**を推奨
+- **@testing-library/jest-dom**でマッチャー拡張
+- **MSW**でAPIモック
+
+### テストの書き方
+
+```tsx
+import { render, screen, fireEvent } from '@testing-library/react';
+import { Button } from './Button';
+
+describe('Button', () => {
+  it('renders children correctly', () => {
+    render(<Button>Click me</Button>);
+    expect(screen.getByText('Click me')).toBeInTheDocument();
+  });
+
+  it('calls onClick when clicked', () => {
+    const handleClick = jest.fn();
+    render(<Button onClick={handleClick}>Click me</Button>);
+    
+    fireEvent.click(screen.getByText('Click me'));
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+## 開発環境
+
+### 推奨ツール
+
+- **Vite**または**Next.js**で開発環境構築
+- **ESLint** + **Prettier**でコード品質管理
+- **TypeScript**で型安全性確保
+- **Storybook**でコンポーネント開発
+
+### パッケージ管理
+
+```bash
+npm install              # 依存関係インストール
+npm run dev              # 開発サーバー起動
+npm run build            # プロダクションビルド
+npm run test             # テスト実行
+npm run lint             # Lint実行
+npm run type-check       # 型チェック実行
+```
+
+---
+
+*参考: [React公式ドキュメント](https://react.dev/), [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)*
