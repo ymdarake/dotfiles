@@ -60,10 +60,19 @@ terraform apply -var-file="environments/prod.tfvars"
 ├── terraform.tfvars  # デフォルトの変数値
 ├── backend.tf        # バックエンド設定（S3等）
 ├── modules/          # 再利用可能なモジュール
-│   ├── vpc/
-│   ├── ec2/
-│   └── rds/
-└── environments/     # 環境ごとの変数ファイル
+│   ├── app/                    # 意味単位（アプリケーションドメイン）
+│   │   ├── api-gateway/
+│   │   ├── data-processing/
+│   │   └── monitoring/
+│   ├── platform/              # 共通基盤（横断ドメイン）
+│   │   ├── networking/
+│   │   ├── security/
+│   │   └── observability/
+│   └── components/            # 機能単位（下位の汎用部品）
+│       ├── database/
+│       ├── queue/
+│       └── compute/
+└── environments/              # 環境ごとの変数ファイル
     ├── dev.tfvars
     ├── staging.tfvars
     └── prod.tfvars
@@ -236,11 +245,70 @@ resource "aws_instance" "web_server" {
 - 再利用可能な構成はモジュール化
 - モジュールには README.md を用意
 - Input/Output を明確に定義
+- ディレクトリは「意味単位」で整理（networking/compute/database/security/observability など）。
+  単一リソース名（vpc/ec2/rds）の粒度ではなく、ドメイン機能でまとめる。
+
+#### モジュール階層（意味 → 機能）
+
+意味単位の上位モジュール（例: `modules/networking`）から、機能単位の下位モジュール（例: `modules/feature/vpc`, `modules/feature/subnets`, `modules/feature/nat` など）を合成します。上位は意図・命名・ポリシーを一元適用し、必要最小限の出力だけを再エクスポートします。
+
+ディレクトリ例:
+
+```
+modules/
+  networking/           # 意味単位（上位）
+    main.tf
+    variables.tf
+    outputs.tf
+  feature/              # 機能単位（下位）
+    vpc/
+      main.tf
+      variables.tf
+      outputs.tf
+    subnets/
+      main.tf
+      variables.tf
+      outputs.tf
+    nat/
+      main.tf
+      variables.tf
+      outputs.tf
+```
+
+上位から下位を参照する例（抜粋）:
+
+```hcl
+# modules/networking/main.tf
+variable "environment" { type = string }
+variable "vpc_cidr"    { type = string }
+
+module "vpc" {
+  source   = "../feature/vpc"
+  name     = "${var.environment}-vpc"
+  vpc_cidr = var.vpc_cidr
+}
+
+module "subnets" {
+  source    = "../feature/subnets"
+  vpc_id    = module.vpc.vpc_id
+  cidrs     = ["10.0.1.0/24", "10.0.2.0/24"]
+  az_suffix = ["a", "c"]
+}
+
+module "nat" {
+  source            = "../feature/nat"
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.subnets.public_subnet_ids
+}
+
+output "vpc_id"            { value = module.vpc.vpc_id }
+output "public_subnet_ids" { value = module.subnets.public_subnet_ids }
+```
 
 #### モジュール例
 
 ```hcl
-# modules/vpc/main.tf
+# modules/networking/main.tf
 variable "vpc_cidr" {
   description = "VPCのCIDRブロック"
   type        = string
@@ -277,15 +345,15 @@ output "vpc_cidr_block" {
 
 ```hcl
 # main.tf
-module "vpc" {
-  source = "./modules/vpc"
+module "networking" {
+  source = "./modules/networking"
 
   vpc_cidr    = "10.0.0.0/16"
   environment = var.environment
 }
 
 resource "aws_subnet" "public" {
-  vpc_id     = module.vpc.vpc_id
+  vpc_id     = module.networking.vpc_id
   cidr_block = "10.0.1.0/24"
   # ...
 }
