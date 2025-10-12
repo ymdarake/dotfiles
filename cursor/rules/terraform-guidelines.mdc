@@ -25,24 +25,58 @@ terraform workspace list   # ワークスペース一覧
 terraform workspace select <name>  # ワークスペース切り替え
 ```
 
+## 環境ごとの実行方法
+
+```bash
+# 開発環境で実行
+cd environments/dev
+terraform init
+terraform plan
+terraform apply
+
+# ステージング環境で実行
+cd environments/staging
+terraform init
+terraform plan
+terraform apply
+
+# 本番環境で実行
+cd environments/prod
+terraform init
+terraform plan
+terraform apply
+```
+
 ## プロジェクト構成
 
 ```
 .
-├── main.tf           # メインの設定
-├── variables.tf      # 変数定義
-├── outputs.tf        # Output定義
-├── versions.tf       # Terraformバージョン・プロバイダー定義
-├── terraform.tfvars  # 変数の値（環境ごと）
-├── backend.tf        # バックエンド設定（S3等）
 ├── modules/          # 再利用可能なモジュール
 │   ├── vpc/
 │   ├── ec2/
 │   └── rds/
 └── environments/     # 環境ごとの設定
     ├── dev/
+    │   ├── main.tf           # メインの設定
+    │   ├── variables.tf      # 変数定義
+    │   ├── outputs.tf        # Output定義
+    │   ├── versions.tf       # Terraformバージョン・プロバイダー定義
+    │   ├── terraform.tfvars  # 変数の値
+    │   └── backend.tf        # バックエンド設定（S3等）
     ├── staging/
+    │   ├── main.tf
+    │   ├── variables.tf
+    │   ├── outputs.tf
+    │   ├── versions.tf
+    │   ├── terraform.tfvars
+    │   └── backend.tf
     └── prod/
+        ├── main.tf
+        ├── variables.tf
+        ├── outputs.tf
+        ├── versions.tf
+        ├── terraform.tfvars
+        └── backend.tf
 ```
 
 ## コーディングスタイル
