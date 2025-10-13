@@ -111,6 +111,13 @@ alwaysApply: true
 - ディレクトリ構造を ls や tree で確認
 - `.cursor/rules/` ディレクトリでプロジェクト固有の情報を確認
 
+### アーキテクチャドキュメント（必須要素）
+- `docs/architecture.md` には以下を必ず含めること：
+  - Mermaid 記法の graph（システム構成図）
+  - コンポーネント一覧（テーブル形式）
+  - Mermaid 記法の sequenceDiagram（主要フロー）
+  - 参考: `.cursor/rules/mermaid-guidelines.mdc`
+
 ## プロジェクト固有設定の優先順位
 
 - プロジェクト固有の指示は、各リポジトリの `.cursor/rules/` ディレクトリ内のファイルを最優先とする。

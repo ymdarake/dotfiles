@@ -1,0 +1,78 @@
+# Mermaid 図作成ガイドライン
+
+一般的な実例に基づく、Mermaid記法のガイドライン。
+
+## ノードラベルと形状
+- 括弧/記号/空白を含むラベルは二重引用符で囲む
+  - 例: `CF["collector-function (Cloud Functions Python)"]`
+- ラベル内の改行は使わず、半角スペースに置換（`\n` は文字通り表示される場合がある）
+  - NG: `GCS[("Cloud Storage\nraw-data")]`
+  - OK: `GCS[("Cloud Storage raw-data")]`
+- 形状指定はラベル外側（`[]`, `()`, `(())`, `{}`）で、ラベル中の括弧はクォートで許容
+  - 例: `FS[("Firestore user_feeds / dedup_keys")]`
+
+## サブグラフ/スタイル
+- `subgraph` でレイヤ/領域（Ingest/Data/Analyze/API/Client 等）を明確化
+- スタイル（`classDef`）は詳細ドキュメントで、README の簡易図では最小限に
+
+## エッジと記号
+- 通常フローは `-->`、補助/参照は `-.->` を使い分ける
+- テキスト付きエッジは最小限（詳細は表や注釈へ）
+
+## シーケンス図（sequenceDiagram）
+- `participant` は短名＋ラベル（`participant APP as application-service`）
+- メッセージは動詞から（例: `APP->>DB: レコード作成`）
+- 任意/本番のみ等は注釈で明記
+
+### 典型例（基本フロー）
+```mermaid
+sequenceDiagram
+  participant CL as client
+  participant API as api-gateway
+  participant APP as application-service
+  participant DB as database
+  participant EXT as external-service
+
+  CL->>API: リクエスト送信（JSON）
+  API->>APP: リクエスト委譲
+  APP->>DB: レコード検索
+  DB-->>APP: 検索結果
+  APP->>EXT: 外部API呼び出し（必要時）
+  EXT-->>APP: 外部API応答
+  APP-->>API: 正常レスポンス（200, JSON）
+  API-->>CL: 応答返却
+
+  Note over APP,DB: トランザクションは最小範囲で
+  opt リトライ
+    APP->>EXT: 再試行（指数バックオフ）
+  end
+```
+
+## 典型例（簡易構成図）
+```mermaid
+graph LR
+  subgraph System[System]
+    CL[Client]
+    API[API Gateway]
+    APP[Application Service]
+    Q[Message Queue]
+    DB[(Database)]
+    OBJ[(Object Storage)]
+    BUS[Event Bus]
+    WK[Background Worker]
+  end
+
+  CL --> API --> APP
+  APP --> DB
+  APP --> OBJ
+  APP -.-> BUS
+  APP --> Q
+  Q --> WK
+  WK --> DB
+  BUS --> APP
+```
+
+## トラブルシュート（パースエラー）
+- 例: `Expecting 'SQE' ... got 'PS'`
+  - 未クォートの括弧付きラベル / ラベル内改行 / 括弧不一致が原因になりやすい
+- 対処: ラベルをクォート、改行→スペース、対応括弧を見直す
