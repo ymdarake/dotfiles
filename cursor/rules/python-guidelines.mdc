@@ -1,0 +1,671 @@
+# Python プロジェクトガイドライン
+
+Pythonプロジェクト用の詳細な開発ガイドラインです。
+
+## 技術スタック
+
+- **言語**: Python 3.11+
+- **主要ライブラリ（例）**:
+  - アプリケーション: `fastapi` または `flask`
+  - データ処理: `pandas`, `scikit-learn`（必要に応じて）
+  - バリデーション: `pydantic`
+  - HTTPクライアント: `requests`, `httpx`
+  - テスト: `pytest`, `pytest-cov`, `pytest-mock`
+- **実行環境**: コンテナ（Docker/OCI）、ジョブランナー/スケジューラ、サーバレス等（プロバイダ非依存）
+
+## Bashコマンド
+
+```bash
+# 依存関係管理
+pip install -r requirements.txt           # 本番依存インストール
+pip install -r requirements-dev.txt       # 開発依存インストール
+pip freeze > requirements.txt             # 依存固定
+
+# テスト実行（TDD必須）
+pytest tests/                             # 全テスト実行
+pytest tests/test_main.py                 # 特定ファイル実行
+pytest tests/ --cov=.                     # カバレッジ付き実行
+pytest tests/ --cov=. --cov-report=html   # HTMLレポート生成
+pytest tests/ -v                          # 詳細出力
+pytest tests/ -x                          # 最初の失敗で停止
+pytest tests/ -k "test_url"               # パターンマッチ実行
+
+# コード品質
+pylint src/                                # Lint実行
+black src/                                 # フォーマット実行
+mypy src/                                  # 型チェック実行
+isort src/                                 # import整理
+
+# ローカル実行（Webアプリの例: FastAPI）
+uvicorn app.main:app --reload
+```
+
+## プロジェクト構成（標準例）
+
+```
+.
+├── src/
+│   ├── app/
+│   │   ├── main.py            # エントリーポイント（例: FastAPI）
+│   │   └── __init__.py
+│   ├── domain/
+│   │   ├── services.py        # ビジネスロジック
+│   │   └── __init__.py
+│   └── infra/
+│       ├── repository.py      # ストレージ/外部APIラッパ
+│       └── __init__.py
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py            # pytest設定・フィクスチャ
+│   └── test_services.py       # テストコード
+├── requirements.txt           # 本番依存
+├── requirements-dev.txt       # 開発依存（pytest等）
+├── pyproject.toml             # ツール設定集約
+└── README.md
+```
+
+## Python 固有のベストプラクティス
+
+### 1. 型ヒントの徹底
+
+**必須**: すべての関数・メソッドに型ヒントを付与
+
+```python
+from typing import List, Dict, Optional, Any, Tuple
+from datetime import datetime
+
+# ✅ 良い例
+def filter_ng_words(texts: List[str], ng_words: List[str]) -> List[str]:
+    """NG単語を含むテキストを除外"""
+    return [text for text in texts if not any(ng in text for ng in ng_words)]
+
+def fetch_feed(url: str) -> Dict[str, Any]:
+    """RSSフィードを取得"""
+    return feedparser.parse(url)
+
+def extract_fulltext(url: str, timeout: int = 15) -> Optional[str]:
+    """記事本文を抽出（失敗時はNone）"""
+    try:
+        article = Article(url=url, language='ja')
+        article.download()
+        article.parse()
+        return article.text or None
+    except Exception:
+        return None
+
+# ❌ 悪い例（型ヒントなし）
+def process_data(data):
+    return data.strip()
+```
+
+### 2. docstring の記述
+
+Google Style または NumPy Style を使用
+
+```python
+def calculate_tfidf(texts: List[str], min_df: int = 2, ngram_range: Tuple[int, int] = (1, 2)) -> Any:
+    """
+    TF-IDFベクトル化を実行
+    
+    Args:
+        texts: ベクトル化対象のテキストリスト
+        min_df: 最小文書頻度（デフォルト: 2）
+        ngram_range: n-gramの範囲（デフォルト: (1, 2) = uni-gram + bi-gram）
+        
+    Returns:
+        TfidfVectorizerオブジェクト
+        
+    Raises:
+        ValueError: textsが空の場合
+        
+    Examples:
+        >>> texts = ["良い記事", "悪い記事"]
+        >>> vectorizer = calculate_tfidf(texts)
+    """
+    if not texts:
+        raise ValueError("texts must not be empty")
+    
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    vectorizer = TfidfVectorizer(min_df=min_df, ngram_range=ngram_range)
+    vectorizer.fit(texts)
+    return vectorizer
+```
+
+### 3. エラーハンドリング
+
+```python
+import logging
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
+
+logger = logging.getLogger(__name__)
+
+# リトライ付きAPI呼び出し
+@retry(stop=stop_after_attempt(3), wait=wait_exponential_jitter(initial=1, max=8))
+def fetch_feed(url: str) -> Dict[str, Any]:
+    """RSSフィードを取得（最大3回リトライ）"""
+    return feedparser.parse(url)
+
+# カスタム例外の定義
+class ValidationError(Exception):
+    """バリデーションエラー"""
+    pass
+
+class ProcessingError(Exception):
+    """処理エラー"""
+    pass
+
+# 適切なエラーハンドリング
+def process_article(url: str) -> Optional[Dict[str, Any]]:
+    """記事を処理（失敗時はNone、ログ出力）"""
+    try:
+        content = extract_fulltext(url)
+        if not content:
+            logger.warning(f"Failed to extract content: {url}")
+            return None
+        return {"url": url, "content": content}
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}", exc_info=True)
+        return None
+    except Exception as e:
+        logger.exception(f"Unexpected error processing {url}: {e}")
+        return None
+```
+
+### 4. 環境変数の扱い
+
+```python
+import os
+from typing import Optional
+
+# デフォルト値付き取得（例）
+OUTPUT_BUCKET = os.getenv('OUTPUT_BUCKET', 'local-bucket')
+MAX_ITEMS = int(os.getenv('MAX_ITEMS', '50'))
+TIMEOUT_SEC = int(os.getenv('REQUEST_TIMEOUT_SEC', '15'))
+
+# 必須環境変数のチェック
+def get_required_env(key: str) -> str:
+    """必須環境変数を取得（未設定時は例外）"""
+    value = os.getenv(key)
+    if value is None:
+        raise ValueError(f"Required environment variable not set: {key}")
+    return value
+
+# 例: 必須のアプリ識別子
+APP_NAME = get_required_env('APP_NAME')
+```
+
+### 5. 外部サービスSDKの利用（任意）
+
+```python
+from typing import Protocol, Dict, Any
+
+class ObjectStorage(Protocol):
+    def upload(self, path: str, data: bytes, content_type: str = "application/octet-stream") -> None: ...
+    def download(self, path: str) -> bytes: ...
+
+class InMemoryStorage:
+    def __init__(self) -> None:
+        self._store: Dict[str, bytes] = {}
+
+    def upload(self, path: str, data: bytes, content_type: str = "application/octet-stream") -> None:
+        self._store[path] = data
+
+    def download(self, path: str) -> bytes:
+        return self._store[path]
+
+def save_json(storage: ObjectStorage, path: str, payload: Dict[str, Any]) -> None:
+    import json
+    storage.upload(path, json.dumps(payload).encode("utf-8"), content_type="application/json")
+```
+
+## コーディングスタイル
+
+### 命名規則
+
+```python
+# モジュール・パッケージ: snake_case
+# my_module.py, my_package/
+
+# 関数・変数: snake_case
+def calculate_score(user_id: int) -> float:
+    max_score = 100
+    current_score = get_score(user_id)
+    return current_score / max_score
+
+# クラス: PascalCase
+class UserRepository:
+    def find_by_id(self, user_id: int) -> Optional[User]:
+        pass
+
+# 定数: UPPER_SNAKE_CASE
+MAX_RETRY_COUNT = 3
+DEFAULT_TIMEOUT_SEC = 30
+
+# プライベート: 先頭にアンダースコア
+def _internal_helper(data: str) -> str:
+    return data.strip()
+
+class MyClass:
+    def __init__(self):
+        self._private_var = "private"
+```
+
+### インポート順序（isort準拠）
+
+```python
+# 1. 標準ライブラリ
+import os
+import json
+from datetime import datetime, timezone
+from typing import List, Dict, Optional
+
+# 2. サードパーティ
+import pandas as pd
+from sklearn.cluster import KMeans
+
+# 3. ローカル
+from .preprocessing import filter_ng_words
+from .utils import logger
+```
+
+### Lintとフォーマット
+
+```python
+# Black（フォーマッター）
+# - 行長: 88文字（デフォルト）または100文字
+# - シングルクォート使用
+# - trailing comma
+
+# pylint（静的解析）
+# pylint: disable=too-many-arguments  # コメントで無効化可能
+
+# mypy（型チェック）
+# mypy --strict でエラーゼロを目指す
+```
+
+## テスト戦略（TDD必須）
+
+### pytest の基本
+
+```python
+# tests/conftest.py
+import pytest
+from unittest.mock import MagicMock
+
+@pytest.fixture
+def mock_storage_client():
+    """Cloud Storageのモック"""
+    return MagicMock()
+
+@pytest.fixture
+def sample_articles():
+    """テスト用記事データ"""
+    return [
+        {"url": "https://example.com/1", "title": "記事1"},
+        {"url": "https://example.com/2", "title": "記事2"},
+    ]
+
+# tests/test_preprocessing.py
+import pytest
+from preprocessing import filter_ng_words, tokenize_text
+
+class TestFilterNgWords:
+    """NG単語フィルタリングのテスト"""
+    
+    def test_filters_ng_words(self):
+        """NG単語を含むテキストを除外"""
+        texts = ["良い記事", "悪い記事", "普通の記事"]
+        ng_words = ["悪い"]
+        
+        result = filter_ng_words(texts, ng_words)
+        
+        assert result == ["良い記事", "普通の記事"]
+    
+    def test_empty_ng_words_returns_all(self):
+        """NG単語が空の場合は全件返す"""
+        texts = ["記事1", "記事2"]
+        
+        result = filter_ng_words(texts, [])
+        
+        assert result == texts
+    
+    def test_empty_texts_returns_empty(self):
+        """空のテキストリストは空を返す"""
+        result = filter_ng_words([], ["NG"])
+        assert result == []
+
+# モックを使ったテスト
+def test_upload_to_gcs(mock_storage_client):
+    """GCSアップロードのテスト"""
+    # モック設定
+    mock_bucket = MagicMock()
+    mock_blob = MagicMock()
+    mock_storage_client.bucket.return_value = mock_bucket
+    mock_bucket.blob.return_value = mock_blob
+    
+    # 実行
+    upload_to_gcs(mock_storage_client, "bucket", "file.json", b"data")
+    
+    # 検証
+    mock_storage_client.bucket.assert_called_once_with("bucket")
+    mock_blob.upload_from_string.assert_called_once()
+```
+
+### カバレッジ目標
+
+- 新規コード: **100%**（TDDなので必然的に達成）
+- 既存コード: **80%以上**
+- critical path: **100%必須**
+
+### テストの種類
+
+```python
+# ユニットテスト（最優先）
+def test_normalized_url():
+    assert normalized_url('  https://example.com  ') == 'https://example.com'
+
+# パラメトライズドテスト
+@pytest.mark.parametrize("input_url,expected", [
+    ('  https://example.com  ', 'https://example.com'),
+    ('https://example.com', 'https://example.com'),
+    ('', ''),
+])
+def test_normalized_url_parametrized(input_url, expected):
+    assert normalized_url(input_url) == expected
+
+# 例外テスト
+def test_raises_value_error():
+    with pytest.raises(ValueError, match="must not be empty"):
+        calculate_tfidf([])
+
+# フィクスチャを使った統合テスト
+def test_end_to_end_processing(sample_articles, mock_storage_client):
+    result = process_articles(sample_articles, mock_storage_client)
+    assert len(result) > 0
+```
+
+## Webアプリ/ジョブ実行（一般例）
+
+### Webアプリ（FastAPI）
+
+```python
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+
+@app.post("/process")
+def process(payload: dict):
+    try:
+        result = analyze(payload)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+### 構造化ログ
+
+```python
+import logging
+from pythonjsonlogger import jsonlogger
+
+# JSON構造化ログの設定（プロバイダ非依存）
+logger = logging.getLogger()
+log_handler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter(
+    '%(asctime)s %(name)s %(levelname)s %(message)s'
+)
+log_handler.setFormatter(formatter)
+logger.addHandler(log_handler)
+logger.setLevel(logging.INFO)
+
+# 使用例
+logger.info("Processing started", extra={
+    "requestId": request_id,
+    "traceId": trace_id,
+    "resource": resource_name,
+})
+```
+
+## 依存関係管理
+
+### requirements.txt の分離
+
+```txt
+# requirements.txt（本番）
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+requests==2.32.3
+pandas==2.2.2
+scikit-learn==1.5.2
+
+# requirements-dev.txt（開発・テスト）
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+freezegun==1.4.0
+responses==0.24.1
+black==23.12.1
+ruff==0.6.8
+mypy==1.8.0
+isort==5.13.2
+```
+
+### バージョン固定
+
+- **本番**: 完全固定（`==`）
+- **開発**: 互換範囲（`~=` または `>=,<`）も可
+
+## パフォーマンス最適化
+
+### 並行処理
+
+```python
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Callable, Any
+
+def parallel_process(items: List[Any], func: Callable, max_workers: int = 5) -> List[Any]:
+    """並行処理ユーティリティ"""
+    results = []
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(func, item): item for item in items}
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                logger.error(f"Task failed: {e}")
+    return results
+
+# 使用例
+urls = ["https://example.com/1", "https://example.com/2"]
+articles = parallel_process(urls, extract_fulltext, max_workers=3)
+```
+
+### メモリ効率
+
+```python
+# ジェネレータを使う（大量データ処理）
+def read_large_file(file_path: str):
+    """大きなファイルを行ごとに読む"""
+    with open(file_path, 'r') as f:
+        for line in f:
+            yield line.strip()
+
+# バッチ処理
+def batch_process(items: List[Any], batch_size: int = 100):
+    """バッチごとに処理"""
+    for i in range(0, len(items), batch_size):
+        batch = items[i:i + batch_size]
+        yield batch
+```
+
+## セキュリティ
+
+- 環境変数で秘密情報を管理（Secret Manager使用推奨）
+- SQLインジェクション対策（パラメータ化クエリ）
+- 入力値検証（Pydantic等使用）
+
+```python
+from pydantic import BaseModel, Field, validator
+
+class ArticleInput(BaseModel):
+    """記事入力バリデーション"""
+    url: str = Field(..., min_length=1, max_length=2048)
+    title: str = Field(..., min_length=1, max_length=500)
+    
+    @validator('url')
+    def validate_url(cls, v):
+        if not v.startswith(('http://', 'https://')):
+            raise ValueError('Invalid URL scheme')
+        return v
+```
+
+## まとめ
+
+- **型ヒント必須**（mypy --strict目標）
+- **docstring必須**（Google/NumPy Style）
+- **TDD徹底**（Red → Green → Refactor）
+- **カバレッジ80%以上**（新規100%）
+- **構造化ログ**（JSON形式）
+- **並行処理**（ThreadPoolExecutor）
+- **外部SDK**（適切なエラーハンドリング）
+
+---
+
+*参考: [PEP 8](https://peps.python.org/pep-0008/), [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html), [Type Hints (PEP 484)](https://peps.python.org/pep-0484/), [The Hitchhiker's Guide to Python](https://docs.python-guide.org/)*
+
+---
+
+## 必要十分な実務ルール（追記）
+
+### バージョン/実行環境
+
+- Python は 3.11 を使用（`.tool-versions` と一致させる）
+- 実行環境は Cloud Functions v2 / Cloud Run。用途により使い分ける
+
+### 依存管理（固定方法）
+
+- 本番/開発を分離（`requirements.txt` と `requirements-dev.txt`）
+- バージョン固定は pip-tools もしくは uv を推奨（`pip freeze` 直書きは非推奨）
+
+```bash
+# pip-tools 例
+pip install pip-tools
+pip-compile -o requirements.txt requirements.in
+pip-compile -o requirements-dev.txt requirements-dev.in
+
+# uv 例（高速）
+uv pip compile requirements.in -o requirements.txt
+uv pip compile requirements-dev.in -o requirements-dev.txt
+```
+
+### 設定の集約（pyproject.toml）
+
+Black / isort / mypy / pytest / Ruff の設定は `pyproject.toml` に集約する。
+
+```toml
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+addopts = "-q --cov=. --cov-report=term-missing --maxfail=1"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+select = ["E","F","I","UP"]
+```
+
+### 構造化ログ（共通フィールド）
+
+- JSON ログに `severity`, `requestId`, `traceId` などの共通フィールドを含める
+
+```python
+trace_id = "..."
+logger.info("Processing started", extra={
+    "severity": "INFO",
+    "requestId": request_id,
+    "traceId": trace_id,
+})
+```
+
+### 並行処理（一般指針）
+
+- I/O バウンドは `ThreadPoolExecutor` を推奨。CPU バウンドはプロセス/ジョブ分離
+- 外部クライアントは接続プール/クライアントをプロセス内で再利用
+- 同時実行数とタイムアウトを明示的に設定
+
+### 日時/タイムゾーン
+
+- すべて UTC・tz-aware を使用（`datetime.now(timezone.utc)`）
+- 永続化は ISO8601 で `Z` 付きに正規化
+
+```python
+from datetime import datetime, timezone
+iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+```
+
+### 機密管理（一般例）
+
+```python
+import os
+
+def get_secret(name: str, default: str | None = None) -> str:
+    value = os.getenv(name, default)
+    if value is None:
+        raise ValueError(f"Secret not found: {name}")
+    return value
+```
+
+### バッチ/ワーカー（例）
+
+```python
+from queue import Queue
+from threading import Thread
+
+def worker(q: Queue):
+    while not q.empty():
+        item = q.get()
+        try:
+            process(item)
+        finally:
+            q.task_done()
+
+q = Queue()
+for i in items:
+    q.put(i)
+
+for _ in range(4):
+    Thread(target=worker, args=(q,), daemon=True).start()
+q.join()
+```
+
+### CI 必須チェック
+
+- pytest + coverage（新規 100% / 全体 80% 以上）
+- black / isort / mypy / ruff を必須ジョブに含める
+
+---
+
+## 実務補足
+
+- テスト実務
+  - 外部I/O・外部クライアント（DB/Storage/HTTP等）はモック化してユニットテストを決定的・高速化
+  - カバレッジHTMLの生成: `pytest --cov=. --cov-report=term-missing --cov-report=html:htmlcov`
+  - Makeのターゲット例: `test-open` でテスト実行後に `htmlcov/index.html` を開く
+
+- 型ヒント
+  - Python 3.11 前提。PEP 604（`str | None` など）を基本とし、レガシー互換が必要な場合のみ `Optional[T]` を許容
+
+- リトライ/タイムアウト
+  - 外部I/Oは指数バックオフ＋最大試行回数を設定
+  - 重い処理にはタイムアウトとフェイルセーフ（`None`返却＋警告ログ）を設ける
