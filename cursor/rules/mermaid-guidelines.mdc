@@ -27,11 +27,19 @@
 ### 典型例（基本フロー）
 ```mermaid
 sequenceDiagram
-  participant CL as client
-  participant API as api-gateway
-  participant APP as application-service
-  participant DB as database
-  participant EXT as external-service
+  box LemonChiffon Client
+    participant CL as client
+  end
+  box AliceBlue Server
+    participant API as api-gateway
+    participant APP as application-service
+  end
+  box HoneyDew Data
+    participant DB as database
+  end
+  box LavenderBlush External Services
+    participant EXT as external-service
+  end
 
   CL->>API: リクエスト送信（JSON）
   API->>APP: リクエスト委譲
@@ -51,17 +59,47 @@ sequenceDiagram
 ## 典型例（簡易構成図）
 ```mermaid
 graph LR
+  %% スタイル定義（このブロック内でも使用できるよう最小限を同梱）
+  classDef layerApp fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,fill-opacity:0.35
+  classDef layerData fill:#f1f8e9,stroke:#388e3c,stroke-width:2px,fill-opacity:0.35
+  classDef layerCompute fill:#ede7f6,stroke:#5e35b1,stroke-width:2px,fill-opacity:0.35
+  classDef layerSecurity fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,fill-opacity:0.35
+  classDef nodeClient fill:#fffde7,stroke:#fbc02d,stroke-width:2px,fill-opacity:0.35
+
   subgraph System[System]
-    CL[Client]
-    API[API Gateway]
-    APP[Application Service]
-    Q[Message Queue]
-    DB[(Database)]
-    OBJ[(Object Storage)]
-    BUS[Event Bus]
-    WK[Background Worker]
+    subgraph ClientZone[Client]
+      CL[Client]
+    end
+
+    subgraph ApplicationLayer[Application Layer]
+      API[API Gateway]
+      APP[Application Service]
+    end
+
+    subgraph DataLayer[Data Layer]
+      DB[(Database)]
+      OBJ[(Object Storage)]
+    end
+
+    subgraph ComputeLayer[Compute Layer]
+      Q[Message Queue]
+      WK[Background Worker]
+      BUS[Event Bus]
+    end
+
+    subgraph SecurityLayer[Security]
+      SEC[Policy/Guard]
+    end
   end
 
+  %% レイヤ別スタイル適用
+  class CL nodeClient
+  class API,APP layerApp
+  class DB,OBJ layerData
+  class Q,WK,BUS layerCompute
+  class SEC layerSecurity
+
+  %% フロー
   CL --> API --> APP
   APP --> DB
   APP --> OBJ
@@ -70,9 +108,27 @@ graph LR
   Q --> WK
   WK --> DB
   BUS --> APP
+
+  %% サブグラフ背景色（レイヤごとの背景）
+  style ClientZone fill:#fffde7,stroke:#fbc02d,stroke-width:2px,fill-opacity:0.15
+  style ApplicationLayer fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,fill-opacity:0.15
+  style DataLayer fill:#f1f8e9,stroke:#388e3c,stroke-width:2px,fill-opacity:0.15
+  style ComputeLayer fill:#ede7f6,stroke:#5e35b1,stroke-width:2px,fill-opacity:0.15
+  style SecurityLayer fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,fill-opacity:0.15
 ```
 
 ## トラブルシュート（パースエラー）
 - 例: `Expecting 'SQE' ... got 'PS'`
   - 未クォートの括弧付きラベル / ラベル内改行 / 括弧不一致が原因になりやすい
 - 対処: ラベルをクォート、改行→スペース、対応括弧を見直す
+
+
+## 実務ルール（要約）
+
+- クラス定義の同梱: 例示用コードブロック内に、使用する `classDef` を最小限再掲する。
+- 役割ベース命名: ノードは役割（Client/API/Application/Data/Compute/Security）で命名する。
+- サブグラフ分割: レイヤ単位で `subgraph` を分割し、読みやすさと責務境界を明確化する。
+- サブグラフ背景: `style <subgraphId> fill:...,stroke:...,fill-opacity:...` で背景色を付与する。
+- クラス適用順序: ノード定義→（必要なら）サブグラフ→`class` 適用→エッジ定義の順を基本とする。
+- エッジ記法: 通常は `-->`、補助/参照は `-.->` を使い分け、説明の文章は最小限に。
+- ラベルのクォート: 括弧/記号/空白を含むラベルは二重引用符で囲む。ラベル内改行は使わない。

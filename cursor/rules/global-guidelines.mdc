@@ -246,10 +246,12 @@ app/
 
 以下の言語・フレームワーク固有のガイドラインも参照してください：
 
+- [Python プロジェクトガイドライン](./python-guidelines.mdc)
 - [React プロジェクトガイドライン](./react-guidelines.mdc)
 - [Go プロジェクトガイドライン](./go-guidelines.mdc)
 - [Terraform プロジェクトガイドライン](./terraform-guidelines.mdc)
 - [TypeScript プロジェクトガイドライン](./typescript-guidelines.mdc)
+- [Mermaid 記法ガイドライン](./mermaid-guidelines.mdc)
 
 ---
 
