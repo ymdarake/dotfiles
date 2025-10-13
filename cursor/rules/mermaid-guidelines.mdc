@@ -26,6 +26,7 @@
 
 ### 典型例（基本フロー）
 ```mermaid
+%%{init:{'theme':'base','themeVariables':{'textColor':'#111111','lineColor':'#333333','fontSize':'16px'}}}%%
 sequenceDiagram
   box LemonChiffon Client
     participant CL as client
