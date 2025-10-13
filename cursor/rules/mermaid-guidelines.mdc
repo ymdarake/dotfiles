@@ -24,21 +24,41 @@
 - メッセージは動詞から（例: `APP->>DB: レコード作成`）
 - 任意/本番のみ等は注釈で明記
 
+### 背景の透過設定
+
+> **Note**: 以下の色設定と透明度は一例です。プロジェクトの要件や好みに応じて自由に調整してください。
+
+#### 全体背景
+- **完全透過**: `background:transparent !important;`
+- **半透明**: `background:rgba(255,255,255,0.5) !important;` （0.0〜1.0で透明度指定）
+- **白背景（デフォルト）**: `background:#ffffff !important;`
+
+#### box の透過設定
+- `box` は名前付き色（例: `LemonChiffon`）ではなく `rgba()` 形式で指定すると透明度を制御可能
+- 例: `box rgba(255,250,205,0.3) Client` （0.3 = 30%の不透明度）
+
+#### 典型例で使用している色設定
+- **全体背景**: `rgba(255,255,255,0.8)` - 白の半透明（80%不透明）
+- **Client box**: `rgba(255,250,205,0.3)` - 薄い黄色（30%不透明）
+- **Server box**: `rgba(240,248,255,0.3)` - 薄い青色（30%不透明）
+- **Data box**: `rgba(240,255,240,0.3)` - 薄い緑色（30%不透明）
+- **External Services box**: `rgba(255,240,245,0.3)` - 薄いピンク色（30%不透明）
+
 ### 典型例（基本フロー）
 ```mermaid
-%%{init:{'theme':'base','themeVariables':{'textColor':'#111111','lineColor':'#333333','fontSize':'16px'}}}%%
+%%{init:{'theme':'base','themeVariables':{'textColor':'#111111','lineColor':'#333333','fontSize':'16px'},'themeCSS':".mermaid{background:rgba(255,255,255,0.8) !important;} .mermaid svg{background-color:rgba(255,255,255,0.8) !important;} svg[aria-roledescription='sequence-diagram']{background-color:rgba(255,255,255,0.8) !important;} .sequenceDiagram{background-color:rgba(255,255,255,0.8) !important;} body .mermaid{background:rgba(255,255,255,0.8) !important;} rect.actor{fill:rgba(255,255,200,0.3) !important;} rect.labelBox{fill:rgba(255,255,255,0.5) !important;}"}}%%
 sequenceDiagram
-  box LemonChiffon Client
+  box rgba(255,250,205,0.3) Client
     participant CL as client
   end
-  box AliceBlue Server
+  box rgba(240,248,255,0.3) Server
     participant API as api-gateway
     participant APP as application-service
   end
-  box HoneyDew Data
+  box rgba(240,255,240,0.3) Data
     participant DB as database
   end
-  box LavenderBlush External Services
+  box rgba(255,240,245,0.3) External Services
     participant EXT as external-service
   end
 
@@ -57,7 +77,54 @@ sequenceDiagram
   end
 ```
 
-## 典型例（簡易構成図）
+## 典型例（システム構成図）
+
+> **Note**: 以下の色設定とレイヤ分けは一例です。プロジェクトの要件や好みに応じて自由に調整してください。
+
+### 色設定の構造
+
+#### ノードクラス定義（`classDef`）
+各レイヤのノードに適用する色とスタイルを定義。`fill-opacity: 0.35` で35%の不透明度。
+
+- **layerApp（Application Layer）**
+  - `fill: #e3f2fd` - 薄い青色
+  - `stroke: #1976d2` - 濃い青色の枠線
+  - `fill-opacity: 0.35` - 35%不透明
+
+- **layerData（Data Layer）**
+  - `fill: #f1f8e9` - 薄い緑色
+  - `stroke: #388e3c` - 濃い緑色の枠線
+  - `fill-opacity: 0.35` - 35%不透明
+
+- **layerCompute（Compute Layer）**
+  - `fill: #ede7f6` - 薄い紫色
+  - `stroke: #5e35b1` - 濃い紫色の枠線
+  - `fill-opacity: 0.35` - 35%不透明
+
+- **layerSecurity（Security Layer）**
+  - `fill: #fff3e0` - 薄いオレンジ色
+  - `stroke: #ef6c00` - 濃いオレンジ色の枠線
+  - `fill-opacity: 0.35` - 35%不透明
+
+- **nodeClient（Client）**
+  - `fill: #fffde7` - 薄い黄色
+  - `stroke: #fbc02d` - 濃い黄色の枠線
+  - `fill-opacity: 0.35` - 35%不透明
+
+#### サブグラフ背景色（`style`）
+各レイヤのサブグラフ全体に適用する背景色。`fill-opacity: 0.15` で15%の不透明度（ノードより薄い）。
+
+- **ClientZone**: `fill: #fffde7, stroke: #fbc02d, fill-opacity: 0.15` - 薄い黄色
+- **ApplicationLayer**: `fill: #e3f2fd, stroke: #1976d2, fill-opacity: 0.15` - 薄い青色
+- **DataLayer**: `fill: #f1f8e9, stroke: #388e3c, fill-opacity: 0.15` - 薄い緑色
+- **ComputeLayer**: `fill: #ede7f6, stroke: #5e35b1, fill-opacity: 0.15` - 薄い紫色
+- **SecurityLayer**: `fill: #fff3e0, stroke: #ef6c00, fill-opacity: 0.15` - 薄いオレンジ色
+
+#### 色設定の意図
+- **ノード（35%不透明）**: 各要素を明確に識別可能
+- **サブグラフ背景（15%不透明）**: レイヤ全体を視覚的にグループ化しつつ、ノードを際立たせる
+- **色の統一**: ノードとサブグラフで同系色を使い、レイヤの一貫性を保つ
+
 ```mermaid
 graph LR
   %% スタイル定義（このブロック内でも使用できるよう最小限を同梱）
