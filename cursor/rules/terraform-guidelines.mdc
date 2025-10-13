@@ -64,7 +64,7 @@ terraform apply -var-file="environments/prod.tfvars"
 │   │   ├── api-gateway/
 │   │   ├── data-processing/
 │   │   └── monitoring/
-│   ├── platform/              # 共通基盤（横断ドメイン）
+│   ├── platform/              # 全サービス横断の標準基盤（ネットワーク/IAM/監査/可観測性など）
 │   │   ├── networking/
 │   │   ├── security/
 │   │   └── observability/
@@ -303,6 +303,37 @@ module "nat" {
 
 output "vpc_id"            { value = module.vpc.vpc_id }
 output "public_subnet_ids" { value = module.subnets.public_subnet_ids }
+```
+
+#### ユーティリティリポジトリへの切り出し（推奨）
+
+`modules/components` などの汎用モジュールは、コードが安定したら**独立リポジトリ**として管理し、各プロジェクトから参照します。
+
+- 配布方法:
+  - Terraform Registry（社内/外）に公開、または
+  - Gitリポジトリを `source` に指定（タグ固定）
+- バージョニング: セマンティックバージョニング（MAJOR.MINOR.PATCH）
+- 参照側: バージョン（またはGitタグ/コミット）を必ず固定
+- CI: 変更時に自動テスト・`terraform validate` を実行し、タグ切り/リリースノートを自動化
+
+例（Gitリポジトリ参照・タグ固定）:
+
+```hcl
+module "queue" {
+  source  = "git::https://github.com/your-org/tf-mod-queue.git?ref=v1.4.2"
+  name    = "${var.environment}-queue"
+  project = var.project
+}
+```
+
+例（Registry参照・バージョン固定）:
+
+```hcl
+module "database" {
+  source  = "your-org/database/google"
+  version = "~> 2.3"
+  name    = "${var.environment}-db"
+}
 ```
 
 #### モジュール例
