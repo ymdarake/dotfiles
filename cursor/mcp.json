@@ -11,6 +11,12 @@
         "--project",
         "${env:PWD}"
       ]
+    },
+    "notionApi": {
+      "command": "notion-mcp-server",
+      "env": {
+        "NOTION_TOKEN": "<↑Command When Globally Installed> your_token_here"
+      }
     }
   }
 }

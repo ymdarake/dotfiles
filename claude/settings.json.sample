@@ -19,7 +19,9 @@
       "Bash(npm test:*)",
       "Bash(go test:*)",
       "Bash(cargo test:*)",
-      "mcp__serena"
+      "mcp__serena",
+      "mcp__notionApi"
     ]
-  }
+  },
+  "alwaysThinkingEnabled": false
 }
