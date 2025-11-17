@@ -20,7 +20,8 @@
       "Bash(go test:*)",
       "Bash(cargo test:*)",
       "mcp__serena",
-      "mcp__notionApi"
+      "mcp__notionApi",
+      "mcp__playwright"
     ]
   },
   "alwaysThinkingEnabled": false
