@@ -9,9 +9,10 @@
             "command": "afplay /System/Library/Sounds/Ping.aiff"
           }
         ]
-      },
+      }
+    ],
+    "Stop": [
       {
-        "matcher": "idle_prompt",
         "hooks": [
           {
             "type": "command",
