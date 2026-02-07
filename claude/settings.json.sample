@@ -1,27 +1,4 @@
 {
-  "hooks": {
-    "Notification": [
-      {
-        "matcher": "permission_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay /System/Library/Sounds/Ping.aiff"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay /System/Library/Sounds/Glass.aiff"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Read(**/*.ts)",
@@ -53,9 +30,32 @@
       "Bash(lsof:*)",
       "mcp__serena",
       "mcp__notionApi",
-      "mcp__playwright"
+      "mcp__playwright",
+      "mcp__gemini-cli"
     ]
   },
-  "alwaysThinkingEnabled": true,
-  "model": "opus"
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Ping.aiff"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff"
+          }
+        ]
+      }
+    ]
+  },
+  "alwaysThinkingEnabled": true
 }
