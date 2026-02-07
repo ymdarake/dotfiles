@@ -134,41 +134,64 @@ test('modal submission', async () => {
 
 ## Firebase Functions Mock
 
-For testing `app.js` that exports a Cloud Function:
+For testing `app.js` that exports a Cloud Function with `region()` + `runWith()` chain:
 
 ```javascript
 jest.mock('@slack/bolt');
-jest.mock('firebase-functions', () => ({
-  https: { onRequest: jest.fn((handler) => handler) },
-}));
-
-const { App, ExpressReceiver } = require('@slack/bolt');
-
-// Mock ExpressReceiver with .app property
-const mockExpressApp = { use: jest.fn() };
-ExpressReceiver.mockImplementation(() => ({ app: mockExpressApp }));
-
-// Mock App with command/view registration
-App.mockImplementation(() => ({
-  command: jest.fn(),
-  view: jest.fn(),
-}));
+jest.mock('firebase-functions');
+jest.mock('../src/commands/problem', () => ({ registerProblemCommand: jest.fn() }));
+// ... other command mocks
 
 describe('app.js', () => {
-  test('creates ExpressReceiver with processBeforeResponse', () => {
+  let mockExpressApp;
+
+  beforeEach(() => {
     jest.resetModules();
     jest.mock('@slack/bolt');
-    jest.mock('firebase-functions', () => ({
-      https: { onRequest: jest.fn((h) => h) },
+    jest.mock('firebase-functions');
+    // ... re-register command mocks
+
+    process.env.SLACK_BOT_TOKEN = 'xoxb-test';
+    process.env.SLACK_SIGNING_SECRET = 'test-secret';
+
+    mockExpressApp = { use: jest.fn() };
+
+    const { ExpressReceiver: MockReceiver } = require('@slack/bolt');
+    MockReceiver.mockImplementation(() => ({ app: mockExpressApp }));
+
+    const { App: MockApp } = require('@slack/bolt');
+    MockApp.mockImplementation(() => ({ command: jest.fn(), view: jest.fn() }));
+
+    // Mock the full chain: functions.region().runWith().https.onRequest()
+    const mockFunctions = require('firebase-functions');
+    const mockOnRequest = jest.fn((handler) => handler);
+    const mockRunWith = jest.fn(() => ({
+      https: { onRequest: mockOnRequest },
     }));
-    // Re-setup mocks...
-    require('../../src/app');
-    expect(ExpressReceiver).toHaveBeenCalledWith(
-      expect.objectContaining({ processBeforeResponse: true })
-    );
+    mockFunctions.region = jest.fn(() => ({
+      runWith: mockRunWith,
+    }));
+    mockFunctions._mockOnRequest = mockOnRequest;
+    mockFunctions._mockRunWith = mockRunWith;
+  });
+
+  test('exports with region, secrets, and onRequest', () => {
+    const mockFunctions = require('firebase-functions');
+    const appModule = require('../src/app');
+
+    expect(mockFunctions.region).toHaveBeenCalledWith('asia-northeast1');
+    expect(mockFunctions._mockRunWith).toHaveBeenCalledWith({
+      secrets: expect.arrayContaining(['SLACK_BOT_TOKEN', 'GITHUB_TOKEN']),
+    });
+    expect(mockFunctions._mockOnRequest).toHaveBeenCalledWith(mockExpressApp);
+    expect(appModule.slack).toBeDefined();
   });
 });
 ```
+
+### Chain structure
+
+`functions.region().runWith().https.onRequest()` — each step returns an object with the next method. The mock must replicate this chain.
 
 ## Common Pitfalls
 
@@ -189,6 +212,33 @@ If a module caches an instance (e.g., `let octokit;`), `jest.clearAllMocks()` al
 ### require() timing
 
 When using `jest.resetModules()`, `require()` the module AFTER mock setup, not at the top of the file. Top-level requires run before `beforeEach`.
+
+### Firebase deploy fails with Bolt initialization error
+
+`firebase deploy` はソースを `require()` して export を解析する。この時点では secrets が注入されていないため、Bolt の `new App({ token })` が `token` なしでクラッシュする。
+
+**解決**: プレースホルダーを設定する:
+
+```javascript
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN || 'placeholder',
+  receiver,
+});
+```
+
+### Secrets not available at runtime
+
+`firebase functions:secrets:set` でシークレットを保存しても、`runWith({ secrets })` を宣言しないと `process.env` に注入されない。
+
+```javascript
+// NG: secrets が process.env に入らない
+exports.slack = functions.https.onRequest(receiver.app);
+
+// OK: secrets が process.env に注入される
+exports.slack = functions
+  .runWith({ secrets: ['SLACK_BOT_TOKEN', 'GITHUB_TOKEN'] })
+  .https.onRequest(receiver.app);
+```
 
 ### Environment variable cleanup
 

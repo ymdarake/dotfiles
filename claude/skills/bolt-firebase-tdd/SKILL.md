@@ -23,19 +23,40 @@ Key configuration:
 const { App, ExpressReceiver } = require('@slack/bolt');
 const functions = require('firebase-functions');
 
+// Firebase deploy 解析時は環境変数が未設定のため、プレースホルダーで初期化を通す
 const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  signingSecret: process.env.SLACK_SIGNING_SECRET || 'placeholder',
   processBeforeResponse: true, // Required for Firebase Functions
 });
 
-const app = new App({ token: process.env.SLACK_BOT_TOKEN, receiver });
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN || 'placeholder',
+  receiver,
+});
 
 // Register handlers...
 
-exports.slack = functions.https.onRequest(receiver.app);
+// runWith({ secrets }) で Secret Manager の値を process.env に注入
+exports.slack = functions
+  .region('asia-northeast1')
+  .runWith({
+    secrets: [
+      'SLACK_BOT_TOKEN',
+      'SLACK_SIGNING_SECRET',
+      'GITHUB_TOKEN',
+      'GITHUB_OWNER',
+      'GITHUB_REPO',
+    ],
+  })
+  .https.onRequest(receiver.app);
 ```
 
-`processBeforeResponse: true` ensures Slack's 3-second timeout is met before async processing.
+### Important notes
+
+- **`processBeforeResponse: true`**: Firebase Functions はレスポンス後にプロセスを停止する可能性があるため必須
+- **`|| 'placeholder'`**: `firebase deploy` 時にソースが `require()` されるが、secrets は未注入。プレースホルダーがないと Bolt の初期化でクラッシュしデプロイが失敗する
+- **`runWith({ secrets })`**: Firebase Functions で `firebase functions:secrets:set` した値を `process.env` に注入するために必須。これがないと secrets は利用できない
+- **`region()`**: デフォルトは `us-central1`。東京リージョンを使う場合は `region('asia-northeast1')` を指定
 
 ## TDD Workflow
 
