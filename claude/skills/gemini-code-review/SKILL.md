@@ -1,6 +1,16 @@
 ---
 name: gemini-code-review
-description: Collect changed files and send them to Gemini CLI (mcp__gemini-cli__chat) for code review, then apply fixes with TDD. Use when the user asks for a Gemini review, says "geminiにレビューしてもらって", "Geminiでコードレビュー", "geminiレビュー", or wants an external AI to review their code changes.
+description: |
+  Collect changed files and send them to Gemini CLI (mcp__gemini-cli__chat) for code review, then apply fixes with TDD.
+
+  **自動発動条件（以下のいずれかに該当する場合、ユーザーの明示的な指示がなくても自動的にこのスキルを実行する）:**
+  - 新しいモジュール、機能、アーキテクチャを設計・実装した場合
+  - 大規模な変更（100行以上の差分）を行った場合
+  - Stop hookから「Geminiコードレビューを実行してください」と指示された場合
+
+  **手動発動条件:**
+  - ユーザーが "geminiにレビューしてもらって", "Geminiでコードレビュー", "geminiレビュー" 等と依頼した場合
+  - 外部AIにコードレビューを依頼したい場合
 ---
 
 # Gemini Code Review

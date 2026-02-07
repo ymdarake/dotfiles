@@ -112,6 +112,31 @@ git log --oneline -10   # 最近のコミット履歴
 cat README.md           # READMEを確認
 ```
 
+## 自動Geminiコードレビューポリシー
+
+### 自動レビュー対象条件
+
+以下のいずれかに該当する場合、作業完了前に `gemini-code-review` スキルを自動的に実行すること:
+
+1. **新規設計・実装**: 新しいモジュール、機能、アーキテクチャを設計・実装した場合
+2. **大規模な変更**: `git diff` の差分が100行以上の場合（Stop hookからも検知される）
+3. **Stop hookからの指示**: Stop hookが「Geminiコードレビューを実行してください」と指示した場合
+
+### レビュー不要条件
+
+以下の場合はレビューをスキップして良い:
+
+- ドキュメント（`.md`ファイル）のみの変更
+- コメントやフォーマットのみの変更
+- 設定ファイル（`.json`, `.yml`, `.toml`）のみの変更
+- 直前のレビューで指摘された修正を適用している最中（レビュー→修正→再レビューの無限ループ防止）
+
+### 注意事項
+
+- レビュー結果の修正適用中は、再度の自動レビューを発動しないこと
+- Stop hookは一度発動すると15分間のクールダウン期間に入り、同一リポジトリでは再発動しない（マーカーファイル: `/tmp/gemini-review-blocked-*`）
+- クールダウン時間は環境変数 `GEMINI_REVIEW_COOLDOWN_MINUTES` で変更可能
+
 ## その他
 
 - READMEは常に最新に保つ
@@ -120,4 +145,4 @@ cat README.md           # READMEを確認
 
 ---
 
-*参考: [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices), [WantedlyのClaude Code活用](https://www.wantedly.com/companies/wantedly/post_articles/981006)*
+*参考: [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)*

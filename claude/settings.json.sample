@@ -54,6 +54,14 @@
             "command": "afplay /System/Library/Sounds/Glass.aiff"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/check-diff-size.sh"
+          }
+        ]
       }
     ]
   },
