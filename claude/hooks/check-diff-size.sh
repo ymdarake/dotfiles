@@ -19,7 +19,7 @@ if [ -z "$repo_root" ]; then
 fi
 repo_hash=$(echo "$repo_root" | shasum | cut -d' ' -f1)
 MARKER_FILE="/tmp/gemini-review-blocked-${repo_hash}"
-COOLDOWN_MINUTES="${GEMINI_REVIEW_COOLDOWN_MINUTES:-15}"
+COOLDOWN_MINUTES="${GEMINI_REVIEW_COOLDOWN_MINUTES:-5}"
 
 # マーカーファイルが存在し、クールダウン期間内ならスキップ
 if [ -f "$MARKER_FILE" ]; then
@@ -45,17 +45,33 @@ fi
 # 出力形式: 追加行数\t削除行数\tファイル名
 total_lines=0
 
+# ロックファイル・自動生成ファイルの除外パターン
+LOCK_PATTERN='(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|go\.sum|Cargo\.lock)$'
+
 while IFS=$'\t' read -r added deleted _file; do
   # バイナリファイルは "-" になるのでスキップ
   if [ "$added" = "-" ] || [ "$deleted" = "-" ]; then
     continue
   fi
-  # ロックファイル・自動生成ファイルを除外
-  if [[ "$_file" =~ (package-lock\.json|yarn\.lock|pnpm-lock\.yaml|go\.sum|Cargo\.lock)$ ]]; then
+  if [[ "$_file" =~ $LOCK_PATTERN ]]; then
     continue
   fi
   total_lines=$((total_lines + added + deleted))
 done < <(git diff --numstat 2>/dev/null; git diff --cached --numstat 2>/dev/null)
+
+# untracked ファイルの行数もカウント（新規作成ファイルの検出）
+while IFS= read -r ufile; do
+  # ロックファイル・自動生成ファイルを除外
+  if [[ "$ufile" =~ $LOCK_PATTERN ]]; then
+    continue
+  fi
+  # バイナリファイルをスキップ（file コマンドで判定）
+  if file --brief --mime "$ufile" 2>/dev/null | grep -qv 'text/'; then
+    continue
+  fi
+  lines=$(wc -l < "$ufile" 2>/dev/null || echo 0)
+  total_lines=$((total_lines + lines))
+done < <(git ls-files --others --exclude-standard 2>/dev/null)
 
 # 閾値未満なら何もしない
 if [ "$total_lines" -lt "$THRESHOLD" ]; then
