@@ -1,5 +1,9 @@
 {
   "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(**/.env)"
+    ],
     "allow": [
       "Read(**/*.ts)",
       "Read(**/*.tsx)",
