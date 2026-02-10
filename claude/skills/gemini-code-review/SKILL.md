@@ -15,17 +15,16 @@ description: |
 
 # Gemini Code Review
 
-Collect code changes, send to Gemini CLI for review, and apply identified fixes using TDD.
+Collect code changes, save diff to a temp file, send file path to Gemini CLI for review, and apply identified fixes using TDD.
 
 ## Workflow
 
-1. Collect changed files
-2. Read file contents
-3. Send review request to Gemini CLI
-4. Present findings to user
-5. Apply fixes with TDD (if user approves)
+1. Collect changed files and save diff to temp file
+2. Send review request to Gemini CLI (file path reference)
+3. Present findings to user
+4. Apply fixes with TDD (if user approves)
 
-### Step 1: Collect Changed Files
+### Step 1: Collect Changed Files and Save Diff
 
 Determine what to review based on context:
 
@@ -35,18 +34,29 @@ Determine what to review based on context:
 
 List the files and confirm scope with user if ambiguous.
 
-### Step 2: Read File Contents
+**diff を一時ファイルに保存:**
 
-Read all changed files using the Read tool. For large diffs, focus on the most impactful files first.
+```bash
+DIFF_FILE=$(mktemp /tmp/gemini-review-diff-XXXXXX.txt)
+git diff > "$DIFF_FILE"
+# staged changes がある場合は --cached も追記
+git diff --cached >> "$DIFF_FILE"
+```
 
-### Step 3: Send Review to Gemini CLI
+### Step 2: Send Review to Gemini CLI
 
-Use `mcp__gemini-cli__chat` with a structured prompt. See [references/review-prompts.md](references/review-prompts.md) for prompt templates by review type.
+Use `mcp__gemini-cli__chat` with a structured prompt that references the diff file path. See [references/review-prompts.md](references/review-prompts.md) for prompt templates by review type.
+
+**重要:** `yolo` パラメータは使用しない。`~/.gemini/settings.json` の `tools.allowed` で `cat` と `git` コマンドを許可済み。
 
 **Default review prompt structure:**
 
 ```
-以下のコード変更をレビューしてください。
+差分ファイル /tmp/gemini-review-diff-XXXXX.txt を cat で読んでレビューしてください。
+
+## 変更ファイル一覧
+- path/to/file1.ts
+- path/to/file2.ts
 
 ## レビュー観点
 - セキュリティ（インジェクション、認証、権限）
@@ -60,22 +70,27 @@ Use `mcp__gemini-cli__chat` with a structured prompt. See [references/review-pro
 - **ファイル**: ファイルパス
 - **問題**: 具体的な問題
 - **修正案**: 具体的な修正コード
-
-## コード
-[file contents here]
 ```
 
-### Step 4: Present Findings
+### Step 3: Present Findings
 
 Summarize Gemini's findings to the user, grouped by severity (High → Medium → Low). Ask if they want to apply fixes.
 
-### Step 5: Apply Fixes with TDD
+### Step 4: Apply Fixes with TDD
 
 For each accepted fix:
 1. **Red**: Write a test that exposes the issue
 2. **Green**: Apply the minimal fix to pass
 3. **Refactor**: Clean up if needed
 4. Run full test suite to confirm no regressions
+
+### Cleanup
+
+After review is complete, remove the temp file:
+
+```bash
+rm -f "$DIFF_FILE"
+```
 
 ## Resources
 

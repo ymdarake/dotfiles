@@ -1,0 +1,16 @@
+{
+  "ide": {
+    "hasSeenNudge": true
+  },
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "general": {
+    "previewFeatures": true
+  },
+  "tools": {
+    "allowed": ["run_shell_command(cat)", "run_shell_command(git)"]
+  }
+}
