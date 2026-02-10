@@ -3,10 +3,9 @@
 ## General Review
 
 ```
-差分ファイル {diff_file_path} を cat で読んでレビューしてください。
-
-## 変更ファイル一覧
-{changed_files_list}
+このリポジトリの git diff を確認し、コード変更をレビューしてください。
+staged changes がある場合は git diff --cached も確認してください。
+必要に応じて変更ファイルの全文も読んで文脈を把握してください。
 
 ## レビュー観点
 - セキュリティ脆弱性（インジェクション、認証・認可、入力バリデーション）
@@ -27,10 +26,9 @@
 ## Security-Focused Review
 
 ```
-差分ファイル {diff_file_path} を cat で読んでセキュリティレビューを実施してください。
-
-## 変更ファイル一覧
-{changed_files_list}
+このリポジトリの git diff を確認し、セキュリティレビューを実施してください。
+staged changes がある場合は git diff --cached も確認してください。
+必要に応じて変更ファイルの全文も読んで文脈を把握してください。
 
 ## 観点（OWASP Top 10 ベース）
 - インジェクション（SQL, コマンド, パストラバーサル）
@@ -53,10 +51,9 @@
 ## Performance Review
 
 ```
-差分ファイル {diff_file_path} を cat で読んでパフォーマンスレビューを実施してください。
-
-## 変更ファイル一覧
-{changed_files_list}
+このリポジトリの git diff を確認し、パフォーマンスレビューを実施してください。
+staged changes がある場合は git diff --cached も確認してください。
+必要に応じて変更ファイルの全文も読んで文脈を把握してください。
 
 ## 観点
 - 計算量（O(n²) 以上のループ、不要な再計算）

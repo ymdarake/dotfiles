@@ -11,6 +11,6 @@
     "previewFeatures": true
   },
   "tools": {
-    "allowed": ["run_shell_command(cat)", "run_shell_command(git)"]
+    "allowed": ["run_shell_command(git)"]
   }
 }
