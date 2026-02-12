@@ -98,9 +98,18 @@ NavigationDestination(
 # 単一フロー実行
 make maestro-test-flow FLOW=<flow_name>.yaml
 
-# 全フロー実行
+# 全フロー実行 (Debug ビルド、日常開発向け、~2分)
 make maestro-test
+
+# 安定テスト実行 (ADB再起動 + アニメーション無効化 + テスト)
+make maestro-test-fast
+
+# Release ビルド→最適化→全テスト (リリース前/CI向け)
+make maestro-run-fast
 ```
+
+**推奨**: 日常開発では `make maestro-test` で十分（High-End AVD で ~2分）。
+`device offline` エラーが発生する場合は `make maestro-test-fast` を使う（ADB 再起動を内蔵）。
 
 ### Phase 5: 失敗時の修正ループ
 
@@ -123,7 +132,11 @@ make maestro-test
 | `make maestro-prepare` | エミュレータの E2E 向け事前設定（スタイラス無効化等） |
 | `make maestro-test` | 全 E2E テスト実行 (.maestro/flows/ を指定) |
 | `make maestro-test-flow FLOW=xxx.yaml` | 単一フロー実行 |
-| `make maestro-run-all` | ビルド→インストール→事前設定→全テスト実行 |
+| `make maestro-run-all` | Debug ビルド→インストール→事前設定→全テスト実行 |
+| `make maestro-optimize-emulator` | アニメーション無効化 |
+| `make maestro-build-release` | Release APK ビルド + インストール |
+| `make maestro-test-fast` | ADB再起動 + アニメーション無効化 + 全テスト実行 |
+| `make maestro-run-fast` | Release ビルド→最適化→全テスト実行 |
 | `make maestro-studio` | Maestro Studio 起動 |
 | `make flutter-test` | ユニットテスト実行 |
 | `make flutter-analyze` | 静的解析 |
@@ -179,6 +192,14 @@ name: "フロー名"
 | Flutter `ValueKey` は Maestro 非対応 | `ValueKey('...')` は Maestro の `id` セレクタで検出できない | `Semantics(identifier: '...')` を使用する |
 | `maestro test .maestro/` はサブディレクトリ未検出 | トップレベルの Flow のみ検出される | `.maestro/flows/` を直接指定する |
 | Android エミュレータのスタイラス手書き | チュートリアルダイアログがテストを妨害する | `make maestro-prepare` で事前に無効化する |
+| `device offline` エラー | ADB 接続が不安定な場合に発生 | `make maestro-test-fast` (ADB 再起動内蔵) を使う |
+
+## パフォーマンス知見
+
+- **エミュレータ性能が支配的**: 高 RAM (4GB+) + 低解像度 (1080x1920) の AVD で ~2分/6フロー
+- **Release ビルド + アニメーション無効化**: ~10%改善。劇的ではないが安定性向上
+- **`extendedWaitUntil` timeout**: 高速 AVD では 5000ms で十分（10000ms は過剰）
+- **`clearState: true`**: アプリ状態リセットのため全フローで使用。テスト独立性を優先
 
 ## アーキテクトとの協調
 
@@ -218,6 +239,8 @@ name: "フロー名"
 │   ├── smoke_test.yaml
 │   ├── timer_basic_flow.yaml
 │   ├── timer_break_flow.yaml
+│   ├── timer_elapsed_update.yaml
+│   ├── log_entry_after_timer.yaml
 │   └── project_management.yaml
 └── shared/              # 共通フロー (runFlow で再利用)
     └── setup_project.yaml
