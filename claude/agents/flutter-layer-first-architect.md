@@ -39,7 +39,7 @@ lib/
 │   └── repository.dart               # データアクセスのインターフェース
 │
 ├── use_case/<feature>/               # service の実装（ビジネスロジック）
-│   └── <feature>_service_impl.dart
+│   └── <feature>_service_impl.dart   # domain/service.dart の実装
 │
 └── infrastructure/<feature>/         # domain層インターフェースの具象実装（DB, API, ログ, ファイル等）
     └── <api|local_storage|memory|log|...>.dart
@@ -78,6 +78,9 @@ domain層には `abstract interface class` のみ。`import` は dart:core と d
 
 ### 2. ViewModel は domain 層にのみ依存
 
+ViewModel の責務は Service の戻り値を UI State にマッピングすることのみ。
+ViewModel 内で Repository の複数メソッドを順序付きで呼び出してはならない。
+
 ```dart
 // ui/page/auth/sign_in_view_model.dart
 class SignInViewModel extends ChangeNotifier {
@@ -85,6 +88,23 @@ class SignInViewModel extends ChangeNotifier {
 
   // ❌ AuthServiceImpl は注入しない（DIコンテナが解決）
   SignInViewModel(this._authService);
+}
+```
+
+```dart
+// 良い例: Service → UI State マッピングのみ
+class TimerNotifier extends Notifier<TimerState> {
+  final TrackingService _service; // Service インターフェース
+
+  Future<void> startWork(...) async {
+    final result = await _service.startWork(...);
+    switch (result) {
+      case Success(:final value):
+        state = _fromSession(value); // マッピングのみ
+      case Failure(:final error):
+        throw StateError('...');
+    }
+  }
 }
 ```
 
@@ -127,6 +147,34 @@ final class Failure<S, E> extends Result<S, E> {
 | **page** | `ui/page/<feature>/` | 画面全体（ViewModel付き） |
 
 atom/compound/layout は feature に依存せず、再利用可能。
+
+### 6. UI State と Domain Model の分離
+
+- **UI State** は `ui/page/<feature>/` に配置（画面の表示状態を集約するクラス）
+- **Domain Model** は `domain/<feature>/model.dart` に配置（ビジネスデータ・ビジネスルール）
+- UI State は Domain Model をフィールドに持ってよい（UI → domain 依存は許可済み）
+- Domain Model は UI フレームワークに依存してはならない
+
+例:
+- domain: `TimerStatus`(enum), `TimeEntryData`, `TrackingSession`
+- ui: `TimerState`（画面表示用の集約。domain の `TimerStatus` や `TimeEntryData` を保持）
+
+### 7. Service と Repository の責務分担
+
+#### Repository の責務
+- 純粋な CRUD 操作 + データ整合性のためのトランザクション
+- 例: 「WorkDay 取得or作成 → エントリ作成」をアトミックに実行
+
+#### Service の責務
+- Repository の複数メソッドのオーケストレーション
+- 操作結果の Aggregate（集約）構築
+- 例: 「作業開始 → WorkDay 取得 → エントリ一覧取得 → TrackingSession を返す」
+
+#### Service 不要の判断基準
+以下のすべてを満たす場合、ViewModel から Repository を直接使用してよい:
+- Repository の単一メソッド呼び出しで完結する
+- 操作結果に対する追加のドメインロジックがない
+- 他の Repository/Service との連携が不要
 
 ## 分析ワークフロー
 
