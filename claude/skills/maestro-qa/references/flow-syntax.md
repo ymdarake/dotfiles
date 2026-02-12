@@ -33,7 +33,7 @@ name: "フロー名"                     # 任意: 表示名
 # テキストでタップ
 - tapOn: "開始"
 
-# id (Flutter Key) でタップ
+# id (Semantics identifier) でタップ
 - tapOn:
     id: "maestro_timer_start_button"
 
@@ -44,9 +44,12 @@ name: "フロー名"                     # 任意: 表示名
 
 ### テキスト入力
 
+> **制約**: `inputText` は **ASCII 文字のみ** 対応。日本語・マルチバイト文字は入力不可 (Maestro Issue #146)。
+> テストでは英数字のみ使用すること。
+
 ```yaml
-# テキスト入力 (フォーカス済みフィールドに)
-- inputText: "プロジェクト名"
+# テキスト入力 (フォーカス済みフィールドに、ASCII のみ)
+- inputText: "project name"
 
 # フィールドクリア
 - eraseText
@@ -121,6 +124,13 @@ name: "フロー名"                     # 任意: 表示名
 ## Key 命名規則 (このプロジェクト)
 
 形式: `maestro_{画面名}_{要素名}`
+
+> **重要**: Flutter の `ValueKey` は Maestro の `id` セレクタで検出できない。
+> 必ず `Semantics(identifier: 'maestro_...')` を使用すること。
+>
+> **NavigationDestination の特殊ケース**: NavigationBar は destinations の型を
+> NavigationDestination に限定しているため、NavigationDestination 自体を Semantics で
+> ラップできない。代わりに `icon` パラメータをラップする。
 
 例:
 - `maestro_nav_timer_tab` - ナビゲーションバーのタイマータブ

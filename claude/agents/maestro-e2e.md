@@ -23,38 +23,68 @@ Flutter タイムトラッカーアプリの UI 自動テストを担当する�
 ### Phase 1: UIコード分析 & Key棚卸し
 
 1. `lib/ui/page/` 以下の対象画面の Dart ファイルを読む
-2. 既存の `ValueKey('maestro_...')` を Grep で収集する
+2. 既存の `Semantics(identifier: 'maestro_...')` を Grep で収集する
 3. テスト対象の操作に必要な要素をリストアップする
 
 ```bash
-# Key 一覧取得
-grep -r "maestro_" lib/ui/ --include="*.dart" -o | sort -u
+# Key 一覧取得 (Semantics identifier を検索。行全体を表示して ValueKey 残存を検出)
+grep -rn "maestro_" lib/ui/ --include="*.dart" | sort -u
 ```
 
 ### Phase 2: Key付与（不足分）
 
-- 不足している Key を対象 Widget に追加する
+- 不足している Key を対象 Widget に `Semantics(identifier:)` で追加する
+- **重要**: Flutter の `ValueKey` は Maestro の `id` セレクタで検出できない。必ず `Semantics(identifier:)` を使うこと
 - **命名規則**: `maestro_{画面名}_{要素名}` (スネークケース)
 - 例: `maestro_timer_start_button`, `maestro_nav_log_tab`
 
-現在付与済みの Key 一覧:
+#### Key 付与コード例
 
-| 画面 | Key | 対象 Widget |
-|------|-----|-------------|
-| app_shell | `maestro_nav_timer_tab` | NavigationDestination (タイマー) |
-| app_shell | `maestro_nav_log_tab` | NavigationDestination (ログ) |
-| app_shell | `maestro_nav_settings_tab` | NavigationDestination (設定) |
-| timer | `maestro_timer_status_label` | ステータスText (停止中/稼働中/休憩中) |
-| timer | `maestro_timer_elapsed_display` | 経過時間Text |
-| timer | `maestro_timer_start_button` | 開始 FilledButton |
-| timer | `maestro_timer_break_button` | 休憩 FilledButton.tonal |
-| timer | `maestro_timer_stop_button` | 終了 FilledButton |
-| timer | `maestro_timer_resume_button` | 再開 FilledButton |
-| settings | `maestro_settings_add_project_fab` | FloatingActionButton |
-| settings | `maestro_settings_theme_selector` | SegmentedButton |
-| log | `maestro_log_calendar` | TableCalendar |
-| log | `maestro_log_monthly_summary` | _MonthlySummaryCard |
-| day_detail | `maestro_day_detail_add_button` | IconButton (手動追加) |
+**通常ウィジェット** — `Semantics` で子要素をラップする:
+
+```dart
+Semantics(
+  identifier: 'maestro_timer_start_button',
+  child: FilledButton(
+    onPressed: () { ... },
+    child: const Text('開始'),
+  ),
+)
+```
+
+**NavigationDestination** — `icon` パラメータに `Semantics` をラップする:
+
+```dart
+NavigationDestination(
+  icon: Semantics(
+    identifier: 'maestro_nav_timer_tab',
+    child: const Icon(Icons.timer),
+  ),
+  label: 'タイマー',
+)
+```
+
+> NavigationBar は destinations の型を NavigationDestination に限定しているため、
+> NavigationDestination 自体を Semantics でラップできない。代わりに icon をラップする。
+
+#### 現在付与済みの Key 一覧
+
+| 画面 | Key | 対象 Widget | Semantics ラップ方法 |
+|------|-----|-------------|---------------------|
+| app_shell | `maestro_nav_timer_tab` | NavigationDestination (タイマー) | icon をラップ |
+| app_shell | `maestro_nav_log_tab` | NavigationDestination (ログ) | icon をラップ |
+| app_shell | `maestro_nav_settings_tab` | NavigationDestination (設定) | icon をラップ |
+| timer | `maestro_timer_status_label` | ステータスText (停止中/稼働中/休憩中) | 通常ラップ |
+| timer | `maestro_timer_elapsed_display` | 経過時間Text | 通常ラップ |
+| timer | `maestro_timer_start_button` | 開始 FilledButton | 通常ラップ |
+| timer | `maestro_timer_break_button` | 休憩 FilledButton.tonal | 通常ラップ |
+| timer | `maestro_timer_stop_button` | 終了 FilledButton | 通常ラップ |
+| timer | `maestro_timer_resume_button` | 再開 FilledButton | 通常ラップ |
+| settings | `maestro_settings_add_project_fab` | FloatingActionButton | 通常ラップ |
+| settings | `maestro_settings_theme_selector` | SegmentedButton | 通常ラップ |
+| log | `maestro_log_calendar` | TableCalendar | 通常ラップ |
+| log | `maestro_log_monthly_summary` | _MonthlySummaryCard | 通常ラップ |
+| day_detail | `maestro_day_detail_add_button` | IconButton (手動追加) | 通常ラップ |
 
 ### Phase 3: Flow YAML 作成
 
@@ -89,9 +119,11 @@ make maestro-test
 | `make maestro-setup` | Maestro CLI インストール確認 |
 | `make maestro-check` | 接続デバイス確認 |
 | `make maestro-build` | flutter build apk --debug |
-| `make maestro-test` | 全 E2E テスト実行 |
+| `make maestro-install` | デバッグ APK をエミュレータにインストール |
+| `make maestro-prepare` | エミュレータの E2E 向け事前設定（スタイラス無効化等） |
+| `make maestro-test` | 全 E2E テスト実行 (.maestro/flows/ を指定) |
 | `make maestro-test-flow FLOW=xxx.yaml` | 単一フロー実行 |
-| `make maestro-run-all` | ビルド→全テスト実行 |
+| `make maestro-run-all` | ビルド→インストール→事前設定→全テスト実行 |
 | `make maestro-studio` | Maestro Studio 起動 |
 | `make flutter-test` | ユニットテスト実行 |
 | `make flutter-analyze` | 静的解析 |
@@ -113,8 +145,8 @@ name: "フロー名"
 # タップ (テキスト指定)
 - tapOn: "開始"
 
-# テキスト入力
-- inputText: "プロジェクト名"
+# テキスト入力 (ASCII のみ。日本語不可)
+- inputText: "project name"
 
 # 表示確認 (id指定)
 - assertVisible:
@@ -139,17 +171,26 @@ name: "フロー名"
 - takeScreenshot: "screenshot_name"
 ```
 
+## 既知の制約
+
+| 制約 | 詳細 | 対応策 |
+|------|------|--------|
+| `inputText` は ASCII のみ | 日本語・マルチバイト文字は入力不可 (Maestro Issue #146) | テストでは英数字のみ使用する |
+| Flutter `ValueKey` は Maestro 非対応 | `ValueKey('...')` は Maestro の `id` セレクタで検出できない | `Semantics(identifier: '...')` を使用する |
+| `maestro test .maestro/` はサブディレクトリ未検出 | トップレベルの Flow のみ検出される | `.maestro/flows/` を直接指定する |
+| Android エミュレータのスタイラス手書き | チュートリアルダイアログがテストを妨害する | `make maestro-prepare` で事前に無効化する |
+
 ## アーキテクトとの協調
 
 `flutter-layer-first-architect` エージェントが設計・実装・ユニットテストを担当し、
 本エージェントが E2E テストを担当する。
 
-**共通言語は Flutter の Key 名**。アーキテクトが UI に付与した Key を E2E テストで参照する。
+**共通言語は `Semantics(identifier:)` の名前**。アーキテクトが UI に付与した identifier を E2E テストで参照する。
 
 協調フロー:
-1. アーキテクトが新機能を実装し、必要な Key を付与する
-2. 本エージェントが Key 一覧を確認し、Flow YAML を作成する
-3. 不足する Key があれば本エージェントが追加する
+1. アーキテクトが新機能を実装し、必要な `Semantics(identifier:)` を付与する
+2. 本エージェントが identifier 一覧を確認し、Flow YAML を作成する
+3. 不足する identifier があれば本エージェントが追加する
 
 ## Gemini 活用
 
