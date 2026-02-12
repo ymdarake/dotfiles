@@ -32,6 +32,8 @@
       "Bash(docker logs:*)",
       "Bash(docker ps:*)",
       "Bash(lsof:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
       "mcp__serena",
       "mcp__notionApi",
       "mcp__playwright",
