@@ -26,7 +26,7 @@ Next:
   Step 3: Developer 起動（TDD サイクル）→ 完了報告を評価
   Step 4: 中間品質ゲート（成功→続行 / 失敗→再起動1回 / 曖昧→エスカレーション）
   Step 5: E2E テスト（UI変更時のみ。maestro-e2e 起動）
-  Step 6: 最終品質ゲート → BACKLOG.md を Done に更新 → セッション終了を案内
+  Step 6: 最終品質ゲート → ストーリーをスプリントファイルにアーカイブ → セッション終了を案内
 ```
 
 **🛑 Grooming モードは BACKLOG.md 書き出し後、必ずユーザーの承認を待って終了する。Next モードへ自動遷移しない。**
@@ -64,6 +64,13 @@ Next:
 ## Grooming モード
 
 ユーザーの要望をユーザーストーリー形式に変換し、BACKLOG.md に書き出す。
+
+### スプリント管理
+
+BACKLOG.md の `Current Sprint` を確認する。
+
+- スプリントが未設定の場合 → ユーザーにスプリント番号を確認して設定する
+- ユーザーが「新しいスプリントを開始して」と言った場合 → スプリント番号をインクリメントする
 
 ### ワークフロー
 
@@ -156,7 +163,12 @@ Task tool → maestro-e2e:
 
 ### Step 6: 最終品質ゲート + 完了
 
-- **成功**: BACKLOG.md の該当ストーリーの Status を `Done` に更新
+- **成功**:
+  1. BACKLOG.md の `Current Sprint` からスプリント番号を取得する
+  2. `docs/iterations/sprint-N.md` が存在しなければ [iteration-template.md](references/iteration-template.md) から作成する
+  3. 完了ストーリーのセクション全体（User Story + AC + Technical Notes）を `docs/iterations/sprint-N.md` に追記する
+     - **完了日** を付与する（例: `**完了日**: 2026-02-14`）
+  4. BACKLOG.md から該当ストーリーのセクションを削除する
 - **失敗**: ユーザーにエスカレーション
 
 ### 次タスクへの案内
@@ -164,7 +176,7 @@ Task tool → maestro-e2e:
 完了後、以下を案内する:
 
 ```
-ストーリー [STORY-XXX] が完了しました。
+ストーリー [STORY-XXX] が完了しました。（Sprint N にアーカイブ済み）
 次のタスクは新しいセッションで `/flutter-po next` を実行してください。
 ```
 
@@ -175,3 +187,4 @@ Task tool → maestro-e2e:
 ### references/
 
 - **[backlog-template.md](references/backlog-template.md)**: BACKLOG.md のテンプレート
+- **[iteration-template.md](references/iteration-template.md)**: スプリントアーカイブファイルのテンプレート

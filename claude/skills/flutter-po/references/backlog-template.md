@@ -1,5 +1,7 @@
 # Product Backlog
 
+**Current Sprint**: sprint-1
+
 ## High Priority
 
 ### [STORY-001] <ストーリータイトル>
