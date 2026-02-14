@@ -14,6 +14,7 @@ skills:
   - flutter-ddd-review
   - gemini-code-review
   - flutter-dialog
+  - stale-state-guard
 ---
 
 # Flutter Developer エージェント
