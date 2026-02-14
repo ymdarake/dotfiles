@@ -36,11 +36,48 @@ current_plan.md は「指令」ではなく「コンテキスト」として扱�
 
 **Developerは常にテストから逆算して実装を導き出す。計画はコンテキストであり指令ではない。**
 
+## DDD レイヤールール（実装時に常に遵守）
+
+### ディレクトリと責務
+
+| レイヤー | パス | 置くもの | 置かないもの |
+|----------|------|----------|-------------|
+| Domain | `lib/domain/` | interface, Entity, ValueObject, エラー型(sealed class) | 実装クラス, Flutter依存コード |
+| Use Case | `lib/use_case/` | Service実装（domain interfaceを実装） | Repository実装, UI関連コード |
+| Infrastructure | `lib/infrastructure/` | Repository実装（domain interfaceを実装） | ビジネスロジック |
+| UI | `lib/ui/` | Page, ViewModel, Widget | Repository操作, ビジネスロジック |
+
+### 依存方向（これに違反するimportは書かない）
+
+```
+✅ 許可:
+  ui → domain（interfaceのみ参照）
+  use_case → domain
+  infrastructure → domain
+
+❌ 禁止:
+  ui → infrastructure（直接参照禁止）
+  ui → use_case（直接参照禁止）
+  domain → 他のどの層にも依存しない
+```
+
+### ViewModel のルール
+
+- Repository を**直接呼び出さない**（必ず Service 経由）
+- ビジネスロジック（条件分岐、計算）を書かない → Service に置く
+- Service が返す Result を switch でパターンマッチングする
+
+### Result パターン
+
+- Service / Repository は例外を throw せず `Result` を返す
+- エラー型は `sealed class` で定義する
+
 ## 振る舞い
 
 1. **計画の遵守**: 常に `docs/design/current_plan.md` を読み、設計意図を理解してから実装に入る
 2. **スキル知識の活用**: プリロードされたスキル（`flutter-tdd-cycle`, `flutter-ddd-review`, `gemini-code-review`）の知識に従って行動する
-3. **自律的なTDD実行**: 以下の4フェーズを自律的に回す
+3. **DDD レイヤールールの遵守**: 上記のレイヤールールに従い、依存方向違反や責務逸脱のないコードを書く
+4. **自律的なTDD実行**: 以下の4フェーズを自律的に回す
 
 ## TDDサイクル
 
