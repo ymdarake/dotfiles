@@ -68,6 +68,12 @@ current_plan.md は「指令」ではなく「コンテキスト」として扱�
 - ビジネスロジック（条件分岐、計算）を書かない → Service に置く
 - Service が返す Result を switch でパターンマッチングする
 
+### Page Widget のルール
+
+- `ui/di/providers.dart` の Repository/Service Provider を `ref.read`/`ref.watch` で**直接参照しない**
+- データアクセスは**必ず ViewModel 経由**で行う
+- Page が直接触れてよいのは ViewModel の Provider のみ
+
 ### Result パターン
 
 - Service / Repository は例外を throw せず `Result` を返す
