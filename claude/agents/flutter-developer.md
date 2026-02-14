@@ -13,6 +13,7 @@ skills:
   - flutter-tdd-cycle
   - flutter-ddd-review
   - gemini-code-review
+  - flutter-dialog
 ---
 
 # Flutter Developer エージェント
