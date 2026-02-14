@@ -176,6 +176,78 @@ atom/compound/layout は feature に依存せず、再利用可能。
 - 操作結果に対する追加のドメインロジックがない
 - 他の Repository/Service との連携が不要
 
+#### Service の粒度設計
+
+**設計時の分離原則**: 以下に該当する場合、同じ feature 内でも最初から別 Service または独立 UseCase として設計する:
+- 扱うドメイン概念（Aggregate）が異なる
+- 依存する Repository 群がほぼ重ならない
+- 変更理由（ビジネスルールの変更契機）が異なる
+
+例: `order` feature 内でも「注文作成」と「注文履歴の集計レポート」は性質が異なるため、最初から `PlaceOrderUseCase` と `OrderReportService`（or UseCase）に分ける。
+
+**成長時の切り出し基準**: 上記に該当せず feature 単位の Service で開始した場合、以下のトリガーで UseCase に切り出す:
+
+| トリガー | 目安 |
+|---------|------|
+| 注入 Repository 数 | 4つ以上 |
+| Service の行数 | 300-400行超 |
+| 1メソッドの行数 | 50行超 |
+| 変更頻度の偏り | 1メソッドだけ頻繁に変更される |
+| クラス内凝集度の低下 | メソッド間で依存 Repository が重ならない |
+
+切り出した UseCase は `use_case/<feature>/` に配置する。命名は `<動詞><名詞>_use_case.dart`（例: `place_order_use_case.dart`）。
+
+```dart
+// use_case/order/place_order_use_case.dart
+class PlaceOrderUseCase {
+  final InventoryRepository _inventoryRepo;
+  final PaymentRepository _paymentRepo;
+  final OrderRepository _orderRepo;
+
+  PlaceOrderUseCase(this._inventoryRepo, this._paymentRepo, this._orderRepo);
+
+  Future<Result<Order, OrderError>> call(OrderRequest request) async {
+    // オーケストレーションロジック
+  }
+}
+```
+
+- `call()` メソッドで実装し、関数のように呼び出せるようにする（Dart の Callable Class）
+- 元の Service からは該当メソッドを削除するか、UseCase に委譲する
+
+### 8. Cross-feature Service（Feature横断のユースケース）
+
+複数featureにまたがるユースケースは、以下のパターンで設計する。
+
+#### 配置ルール
+- **interface**: 主となるfeatureの `domain/<主feature>/service.dart` に定義
+- **実装**: `use_case/<主feature>/` に配置し、他featureの Repository interface を注入
+
+#### 「主feature」の判断基準
+- そのユースケースの**最終的な成果物（戻り値）を持つfeature**
+- 例: 「注文作成」→ Order を返す → 主feature は `order`
+
+#### 構造例
+
+```text
+lib/
+├── domain/
+│   ├── order/
+│   │   └── service.dart          # OrderService interface（createOrder を定義）
+│   ├── inventory/
+│   │   └── repository.dart       # InventoryRepository interface
+│   └── payment/
+│       └── repository.dart       # PaymentRepository interface
+├── use_case/
+│   └── order/
+│       └── order_service_impl.dart  # InventoryRepo + PaymentRepo を注入してオーケストレーション
+```
+
+#### 設計原則
+- cross-feature Service は**他featureの domain interface のみに依存**する（実装には依存しない）
+- 循環依存の禁止: feature A の Service が feature B の Service を呼ぶ場合、B → A の依存は作らない
+- 3つ以上のfeatureを横断する場合は、ユースケースの分割を検討する
+
 ## 分析ワークフロー
 
 ### Step 1: 既存構成の探索
