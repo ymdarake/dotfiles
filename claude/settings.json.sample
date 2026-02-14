@@ -1,9 +1,5 @@
 {
   "permissions": {
-    "deny": [
-      "Read(.env)",
-      "Read(**/.env)"
-    ],
     "allow": [
       "Read(**/*.ts)",
       "Read(**/*.tsx)",
@@ -11,6 +7,8 @@
       "Read(**/*.jsx)",
       "Read(**/*.go)",
       "Read(**/*.py)",
+      "Read(**/*.dart)",
+      "Read(**/pubspec.yaml)",
       "Read(**/*.md)",
       "Read(**/package.json)",
       "Read(**/go.mod)",
@@ -23,6 +21,11 @@
       "Bash(npm test:*)",
       "Bash(go test:*)",
       "Bash(cargo test:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter pub:*)",
+      "Bash(make maestro-*:*)",
+      "Bash(make flutter-*:*)",
       "Bash(docker-compose up:*)",
       "Bash(docker-compose ps:*)",
       "Bash(docker-compose logs:*)",
@@ -38,6 +41,10 @@
       "mcp__notionApi",
       "mcp__playwright",
       "mcp__gemini-cli"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(**/.env)"
     ]
   },
   "hooks": {

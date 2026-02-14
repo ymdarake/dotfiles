@@ -252,6 +252,14 @@ lib/
 - repository: AuthRepository
 - service: AuthService
 
+### テスト対象仕様
+#### <feature名>
+| テスト種別 | 対象 | テスト観点 |
+|-----------|------|-----------|
+| Unit | ServiceImpl | Success/Failureの全パターン |
+| Unit | ViewModel | 状態遷移 |
+| Unit | ValueObject | バリデーション |
+
 ### DI設定方針
 ...
 ```
@@ -276,6 +284,21 @@ lib/
 
 ## Geminiの見解
 ...
+
+## テスト対象仕様
+### <feature名>
+| テスト種別 | 対象 | テスト観点 |
+|-----------|------|-----------|
+| Unit | ServiceImpl | Success/Failureの全パターン |
+| Unit | ViewModel | 状態遷移（初期→ロード→完了/エラー） |
+| Unit | ValueObject | バリデーション、等価性 |
+| E2E | <画面名> | <ユーザーストーリー> |
+
+#### interface メソッド別テスト仕様
+- `Repository.methodName(args) → Result<S, E>`
+  - Success: <期待する正常系の条件>
+  - Failure: <エラー型と発生条件>
+- ...
 
 ## 段階的移行計画
 ### Phase 1: ...
