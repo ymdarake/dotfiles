@@ -37,6 +37,7 @@
       "Bash(lsof:*)",
       "Bash(wc:*)",
       "Bash(find:*)",
+      "Read(~/.claude/skills/**/*)",
       "mcp__serena",
       "mcp__notionApi",
       "mcp__playwright",
