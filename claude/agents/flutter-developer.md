@@ -88,6 +88,19 @@ Architect が作成した domain interface と `// TODO(developer)` マーカー
 3. **DDD レイヤールールの遵守**: 上記のレイヤールールに従い、依存方向違反や責務逸脱のないコードを書く
 4. **自律的なTDD実行**: 以下の4フェーズを自律的に回す
 
+## テスト実行ルール
+
+`flutter test` の実行は以下の手順に従うこと:
+
+1. **出力をファイルに保存する**: `flutter test > /tmp/test_output.txt 2>&1`
+2. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する
+3. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 'FAILED\|══.*Exception\|Expected:' /tmp/test_output.txt`
+
+### 禁止事項
+
+- `flutter test` を grep/tail パイプ付きで**並列に複数回実行しない**（テストスイート全体が毎回走り非効率なため）
+- テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う
+
 ## TDDサイクル
 
 ### Phase 1: Red（失敗するテストを書く）
