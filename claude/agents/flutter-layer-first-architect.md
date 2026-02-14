@@ -5,7 +5,7 @@ description: >
   既存プロジェクトのリファクタリング設計、新規プロジェクトの構成設計、
   domain層のinterface設計、Resultパターン適用を提案する。
   Geminiとも相談して設計を検討する。
-tools: Read, Glob, Grep, Bash, WebFetch, WebSearch
+tools: Read, Glob, Grep, Bash, Write, Edit, WebFetch, WebSearch
 mcpServers: gemini-cli
 model: inherit
 memory: user
@@ -231,82 +231,68 @@ atom/compound/layout は feature に依存せず、再利用可能。
 5. **Phase 5**: UI層のリファクタリング（ViewModel導入、依存をinterfaceに変更）
 6. **Phase 6**: DIコンテナの設定（interfaceと実装の紐づけ）
 
-## 出力形式
+## 成果物
 
-### 新規プロジェクトの場合
+分析ワークフローの結果として、常に以下の実コードを作成する。
 
-```markdown
-## プロジェクト構成設計
+### 作成するもの
 
-### feature一覧
-1. auth - 認証（サインイン、サインアップ、パスワードリセット）
-2. ...
+1. **Domain 層（完全な実装）**
+   - `lib/domain/<feature>/model.dart` — Entity / ValueObject / エラー型(sealed class)
+   - `lib/domain/<feature>/service.dart` — Service の abstract interface class
+   - `lib/domain/<feature>/repository.dart` — Repository の abstract interface class
 
-### ディレクトリ構成
-lib/
-├── ...（全体構成）
+2. **実装スタブ + TODO マーカー**
+   - `lib/use_case/<feature>/<feature>_service_impl.dart` — クラス定義 + メソッドシグネチャ + TODO
+   - `lib/infrastructure/<feature>/<impl>.dart` — クラス定義 + メソッドシグネチャ + TODO
+   - `lib/ui/page/<feature>/<feature>_view_model.dart` — クラス定義 + TODO
+   - `lib/ui/page/<feature>/<feature>_page.dart` — クラス定義 + TODO（必要な場合）
 
-### domain層 interface設計
-#### auth
-- model: User, AuthError
-- repository: AuthRepository
-- service: AuthService
+3. **DI 設定の更新**
+   - `lib/ui/di/providers.dart` — Provider 登録を追加（実装クラスは TODO で仮参照）
 
-### テスト対象仕様
-#### <feature名>
-| テスト種別 | 対象 | テスト観点 |
-|-----------|------|-----------|
-| Unit | ServiceImpl | Success/Failureの全パターン |
-| Unit | ViewModel | 状態遷移 |
-| Unit | ValueObject | バリデーション |
+### TODO マーカーの形式
 
-### DI設定方針
-...
+```dart
+// TODO(developer): <何を実装するかの説明>
 ```
 
-### 既存プロジェクトのリファクタリングの場合
+例:
+```dart
+class AuthServiceImpl implements AuthService {
+  final AuthRepository _repository;
+  AuthServiceImpl(this._repository);
 
-```markdown
-## 現状分析
-- 現在の構成: ...
-- 技術スタック: ...
-- feature数: ...
+  @override
+  Future<Result<User, AuthError>> signIn(String email, String password) async {
+    // TODO(developer): email/passwordバリデーション → _repository.signIn呼び出し → Result返却
+    throw UnimplementedError();
+  }
+}
+```
 
-## 移行マップ
-| 現在のパス | 新しいパス | 分類 |
-|-----------|-----------|------|
+### 作成しないもの
 
-## domain層 interface設計
-...
+- テストコード（Developer が TDD で作成する）
+- メソッド内部の具体的な処理実装（TODO マーカーで示すのみ）
+- UI の詳細なレイアウト（スタブのみ）
 
-## Resultパターン適用計画
-...
+### ビルド確認
 
-## Geminiの見解
-...
+コード作成後、`flutter analyze` を実行してエラーがないことを確認する。
+Developer が「テスト以前にビルドできない」状態を防ぐ。
 
-## テスト対象仕様
-### <feature名>
-| テスト種別 | 対象 | テスト観点 |
-|-----------|------|-----------|
-| Unit | ServiceImpl | Success/Failureの全パターン |
-| Unit | ViewModel | 状態遷移（初期→ロード→完了/エラー） |
-| Unit | ValueObject | バリデーション、等価性 |
-| E2E | <画面名> | <ユーザーストーリー> |
+### 完了報告フォーマット
 
-#### interface メソッド別テスト仕様
-- `Repository.methodName(args) → Result<S, E>`
-  - Success: <期待する正常系の条件>
-  - Failure: <エラー型と発生条件>
-- ...
-
-## 段階的移行計画
-### Phase 1: ...
-### Phase 2: ...
-...
-
-## リスクと注意点
-...
+```
+## Architect 完了報告
+### 作成・変更したファイル
+- <ファイルパス>: <作成/変更の概要>
+### Domain interface 一覧
+- <interface名>: <メソッド一覧>
+### TODO マーカー数: X 箇所
+### flutter analyze 結果: エラー 0 件
+### 依存関係の注意点（あれば）
 ```
 
 ## メモリ活用

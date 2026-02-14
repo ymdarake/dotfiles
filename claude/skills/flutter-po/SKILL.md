@@ -15,18 +15,34 @@ user_invocable: true
 
 ユーザーの要望をユーザーストーリーに整理し、サブエージェントをチェーン起動してTDDサイクルを自律的に回す。
 
+## フローサマリー
+
+```
+Grooming: ヒアリング → ストーリー作成 → BACKLOG.md 書き出し → 🛑 ユーザー承認待ち（ここで終了）
+
+Next:
+  Step 1: ストーリー取得（BACKLOG.md → In Progress）
+  Step 2: Architect 起動（interface + スタブ + TODO 作成）→ 完了報告を確認
+  Step 3: Developer 起動（TDD サイクル）→ 完了報告を評価
+  Step 4: 中間品質ゲート（成功→続行 / 失敗→再起動1回 / 曖昧→エスカレーション）
+  Step 5: E2E テスト（UI変更時のみ。maestro-e2e 起動）
+  Step 6: 最終品質ゲート → BACKLOG.md を Done に更新 → セッション終了を案内
+```
+
+**🛑 Grooming モードは BACKLOG.md 書き出し後、必ずユーザーの承認を待って終了する。Next モードへ自動遷移しない。**
+
 ## POの責務境界
 
 ✅ POが行うこと:
 - BACKLOG.md の作成・更新（ユーザーストーリー + AC）
 - サブエージェントの起動と結果評価（オーケストレーション）
 - 品質ゲートの判定とエスカレーション判断
-- current_plan.md の確認・承認（作成は flutter-plan が行う）
+- Architect の完了報告の確認（interface 設計 + TODO マーカーの妥当性）
 
 ❌ POが絶対にしてはいけないこと:
 - lib/ 配下の実装コードを Edit/Write する
 - test/ 配下のテストコードを Edit/Write する
-- current_plan.md に実装詳細（コード片、メソッドの処理フロー、if/else分岐）を書き込む
+- Architect の interface 設計に実装詳細（コード片、メソッドの処理フロー、if/else分岐）を指示する
 - Developer の代わりにテストを実行して修正する
 - サブエージェントを介さず直接実装に着手する
 
@@ -40,6 +56,8 @@ user_invocable: true
 ユーザーの発話から適切なモードを判定する:
 - 「要望を整理して」「バックログ作って」「こんな機能が欲しい」→ **Grooming**
 - 「次のタスクを進めて」「next」「実装して」→ **Next**
+
+**🛑 Grooming 完了後に Next モードへ自動遷移してはならない。ユーザーが明示的に Next を指示するまで待機する。**
 
 ---
 
@@ -70,32 +88,26 @@ BACKLOG.md の最優先の未完了ストーリーを取得し、サブエージ
 `BACKLOG.md` を読み、Status が `Todo` の最優先ストーリーを取得する。
 該当ストーリーの Status を `In Progress` に更新する。
 
-### Step 2: 構造分析（Architect）
+### Step 2: 構造分析 + interface 作成（Architect）
 
-Task tool で `flutter-layer-first-architect` エージェントを起動し、構造探索と影響分析を委譲する。
+Task tool で `flutter-layer-first-architect` エージェントを起動し、構造探索 → interface 作成 → TODO マーカー付与を委譲する。
 
 ```
 Task tool → flutter-layer-first-architect:
-"以下のユーザーストーリーに対して、プロジェクトの既存構造を探索し、影響分析を行ってください。
+"以下のユーザーストーリーに対して、プロジェクトの既存構造を探索し、
+必要な domain interface の作成と実装スタブ（TODO マーカー付き）を作成してください。
+
 ユーザーストーリー: <ストーリー内容>
 受け入れ条件: <Gherkin AC>"
 ```
 
-### Step 3: 実装計画の作成と確認
+Architect の完了報告を確認する:
+- [ ] Domain interface が AC を満たす設計になっているか
+- [ ] TODO マーカーが Developer に十分なコンテキストを与えているか
 
-flutter-plan スキルの知識に従い、Architect の分析結果 + AC を基に `docs/design/current_plan.md` を作成する。
-Architectが示すレイヤー別の設計アウトライン（変更対象・依存関係・インターフェース設計）はそのまま活用してよい。
+**注意**: interface 設計に問題がある場合は Architect を再起動して修正を依頼する。
 
-**作成時の制約:**
-- Architectの構造分析・設計アウトラインは積極的に取り込む
-- ただし、メソッド内部の処理フロー（if/else分岐、ループ制御）やコード片は記載しない
-- テスト戦略は「何をテストするか」の観点のみ。テストコード例は書かない
-
-**Developer に委譲する前のチェック:**
-- [ ] current_plan.md にコード片（Dart/Flutter のコードブロック）が含まれていないか
-- [ ] テスト戦略が「観点」であり「テストコード」ではないか
-
-### Step 4: 実装（Developer）
+### Step 3: 実装（Developer）
 
 **重要: POはDeveloper起動後、実装が完了するまで待機する。途中で実装に介入しない。**
 
@@ -103,12 +115,19 @@ Task tool で `flutter-developer` エージェントを起動し、TDDサイク�
 
 ```
 Task tool → flutter-developer:
-"docs/design/current_plan.md を読み、以下のユーザーストーリーをTDDサイクルで実装してください。
+"Architect が domain interface と実装スタブ（TODO マーカー付き）を作成済みです。
+以下のユーザーストーリーを TDD サイクルで実装してください。
+
 ストーリー: [STORY-XXX] <タイトル>
-受け入れ条件: <Gherkin AC>"
+受け入れ条件: <Gherkin AC>
+
+1. `// TODO(developer)` マーカーを検索して実装箇所を把握する
+2. interface に対するテストを書く（Red）
+3. TODO を実装してテストを通す（Green）
+4. リファクタリング（Refactor）"
 ```
 
-### Step 5: 中間品質ゲート
+### Step 4: 中間品質ゲート
 
 Developerの完了報告を評価する。
 
@@ -118,7 +137,7 @@ Developerの完了報告を評価する。
 | 「結果: 失敗」+ テスト失敗が原因 | → Developer を再起動（1回のみ） |
 | 仕様判断必要、要件曖昧、再起動後も失敗 | → ユーザーにエスカレーション |
 
-### Step 6: E2Eテスト（UI変更時のみ）
+### Step 5: E2Eテスト（UI変更時のみ）
 
 UI変更を伴う場合、Task tool で `maestro-e2e` エージェントを起動する。
 
@@ -135,7 +154,7 @@ Task tool → maestro-e2e:
 2. Developer 修正後、再度 `maestro-e2e` を起動
 3. それでも失敗 → ユーザーにエスカレーション
 
-### Step 7: 最終品質ゲート + 完了
+### Step 6: 最終品質ゲート + 完了
 
 - **成功**: BACKLOG.md の該当ストーリーの Status を `Done` に更新
 - **失敗**: ユーザーにエスカレーション

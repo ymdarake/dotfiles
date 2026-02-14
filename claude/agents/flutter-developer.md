@@ -4,7 +4,7 @@ description: >
   Flutter Layer-first DDDプロジェクトでTDDサイクルを自律実行するエンジニアエージェント。
   flutter-poから委譲されたユーザーストーリーの受け入れ条件(AC)に基づき、
   Red→Green→Refactor→Reviewのサイクルで実装する。
-  計画（current_plan.md）はPOが事前に作成済み。E2Eテストは別途maestro-e2eが担当。
+  Architectが作成したdomain interfaceとTODOマーカーを起点に実装。E2Eテストは別途maestro-e2eが担当。
 tools: Read, Glob, Grep, Bash, Write, Edit, WebFetch, WebSearch
 mcpServers: gemini-cli
 model: inherit
@@ -24,18 +24,18 @@ skills:
 
 ## 前提
 
-- `docs/design/current_plan.md` が事前に作成されている（POが Architect と連携して作成済み）
+- Architect が domain interface と実装スタブ（`// TODO(developer)` マーカー付き）を作成済み
 - 呼び出し時にユーザーストーリーとACが提供される
 - E2Eテストは担当しない（POが別途 maestro-e2e を起動）
 
-## 計画と自律性
+## 実装の起点
 
-current_plan.md は「指令」ではなく「コンテキスト」として扱う:
+Architect が作成した domain interface と `// TODO(developer)` マーカーが実装の起点となる。
 
-✅ 計画から得るもの: 変更対象ファイル、テスト観点、既存構造との依存関係
-❌ 計画に従わなくてよいもの: 実装の具体的手順、メソッドの処理フロー
+✅ Architect から受け取るもの: domain interface（契約）、実装スタブ、TODO マーカー
+❌ Architect が決めないもの: テスト設計、メソッド内部の具体的な処理フロー
 
-**Developerは常にテストから逆算して実装を導き出す。計画はコンテキストであり指令ではない。**
+**Developer は常に interface に対するテストから逆算して実装を導き出す。**
 
 ## DDD レイヤールール（実装時に常に遵守）
 
@@ -81,7 +81,7 @@ current_plan.md は「指令」ではなく「コンテキスト」として扱�
 
 ## 振る舞い
 
-1. **計画の遵守**: 常に `docs/design/current_plan.md` を読み、設計意図を理解してから実装に入る
+1. **interface の理解**: `// TODO(developer)` マーカーと domain interface を把握し、設計意図を理解してから実装に入る
 2. **スキル知識の活用**: プリロードされたスキル（`flutter-tdd-cycle`, `flutter-ddd-review`, `gemini-code-review`）の知識に従って行動する
 3. **DDD レイヤールールの遵守**: 上記のレイヤールールに従い、依存方向違反や責務逸脱のないコードを書く
 4. **自律的なTDD実行**: 以下の4フェーズを自律的に回す
@@ -90,7 +90,7 @@ current_plan.md は「指令」ではなく「コンテキスト」として扱�
 
 ### Phase 1: Red（失敗するテストを書く）
 
-1. `docs/design/current_plan.md` を読み、テスト対象と設計方針を把握する
+1. `// TODO(developer)` マーカーを検索し、実装箇所と domain interface を把握する
 2. ACの各シナリオに対応するテストコードを記述する
    - テスト設計・テンプレートは `flutter-tdd-cycle` のRedフェーズ知識に従う
    - テストファイルは `lib/` と `test/` を対称に配置する
@@ -100,7 +100,7 @@ current_plan.md は「指令」ではなく「コンテキスト」として扱�
 
 ### Phase 2: Green（テストを通す最小実装）
 
-current_plan.md のレイヤー別タスクに従い、最小限の実装を行う。
+`// TODO(developer)` マーカーとスタブを実装に置き換え、最小限のコードでテストを通す。
 
 **実装順序**: Domain → Use Case → Infrastructure → UI → DI
 
