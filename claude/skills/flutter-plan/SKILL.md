@@ -46,7 +46,10 @@ Task tool → flutter-layer-first-architect エージェント:
 5. test/ 以下の既存テスト状況
 6. 変更・新規作成が必要なファイルの特定
 7. 既存interfaceへの破壊的変更の有無
-8. cross-featureの依存関係（該当する場合）"
+8. cross-featureの依存関係（該当する場合）
+   - 主featureの特定（成果物を持つfeature）
+   - 横断するfeatureのRepository interface一覧
+   - 循環依存リスクの確認"
 ```
 
 エージェントの分析結果を受け取り、Step 3 の計画出力に活用する。
