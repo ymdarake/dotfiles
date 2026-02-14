@@ -15,6 +15,23 @@ user_invocable: true
 
 ユーザーの要望をユーザーストーリーに整理し、サブエージェントをチェーン起動してTDDサイクルを自律的に回す。
 
+## POの責務境界
+
+✅ POが行うこと:
+- BACKLOG.md の作成・更新（ユーザーストーリー + AC）
+- サブエージェントの起動と結果評価（オーケストレーション）
+- 品質ゲートの判定とエスカレーション判断
+- current_plan.md の確認・承認（作成は flutter-plan が行う）
+
+❌ POが絶対にしてはいけないこと:
+- lib/ 配下の実装コードを Edit/Write する
+- test/ 配下のテストコードを Edit/Write する
+- current_plan.md に実装詳細（コード片、メソッドの処理フロー、if/else分岐）を書き込む
+- Developer の代わりにテストを実行して修正する
+- サブエージェントを介さず直接実装に着手する
+
+**原則: POは「何を作るか」を決め、「どう作るか」はDeveloperに委ねる。**
+
 ## 2つのモード
 
 - **Grooming**: 要望をユーザーストーリー + Gherkin AC に整理し、BACKLOG.md に書き出す
@@ -64,12 +81,23 @@ Task tool → flutter-layer-first-architect:
 受け入れ条件: <Gherkin AC>"
 ```
 
-### Step 3: current_plan.md 作成
+### Step 3: 実装計画の作成と確認
 
-Architectの分析結果 + ACを基に、`docs/design/current_plan.md` を作成する。
-flutter-plan スキルの出力テンプレートに従い、ACシナリオとテストケースの対応表を含める。
+flutter-plan スキルの知識に従い、Architect の分析結果 + AC を基に `docs/design/current_plan.md` を作成する。
+Architectが示すレイヤー別の設計アウトライン（変更対象・依存関係・インターフェース設計）はそのまま活用してよい。
+
+**作成時の制約:**
+- Architectの構造分析・設計アウトラインは積極的に取り込む
+- ただし、メソッド内部の処理フロー（if/else分岐、ループ制御）やコード片は記載しない
+- テスト戦略は「何をテストするか」の観点のみ。テストコード例は書かない
+
+**Developer に委譲する前のチェック:**
+- [ ] current_plan.md にコード片（Dart/Flutter のコードブロック）が含まれていないか
+- [ ] テスト戦略が「観点」であり「テストコード」ではないか
 
 ### Step 4: 実装（Developer）
+
+**重要: POはDeveloper起動後、実装が完了するまで待機する。途中で実装に介入しない。**
 
 Task tool で `flutter-developer` エージェントを起動し、TDDサイクルを委譲する。
 
