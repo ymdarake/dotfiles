@@ -57,11 +57,6 @@ testWidgets('開始ボタンをタップするとViewModelのstartが呼ばれ�
 `lib/infrastructure/<feature>/` の具象実装に対するテスト。
 外部依存（API、DB等）をモックし、データ変換・エラーハンドリングを検証する。
 
-## 計画ファイルの参照
-
-flutter-plan スキルが出力した計画ファイル（`docs/design/current_plan.md`）が存在する場合、
-テスト対象・テスト観点・interface仕様をそこから読み取る。これにより設計意図との乖離を防ぐ。
-
 ## ワークフロー
 
 ### Step 1: プロジェクト構造の把握
