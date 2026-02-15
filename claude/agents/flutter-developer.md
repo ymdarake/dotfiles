@@ -130,26 +130,25 @@ final logicalDate = DateTime(local.year, local.month, local.day);
 
 ## テスト実行ルール
 
-### ⚠️ 絶対ルール: 同時実行禁止
+### ⚠️ 絶対ルール: テストの同時実行は一切禁止
 
-**テストコマンド（`flutter test`、`make maestro-test` 等）は、常にただ1つだけ実行すること。**
+**テストコマンド（`flutter test`、`dart analyze`、`make maestro-test` 等）は、1回のメッセージで必ず1つだけ実行すること。**
 
-- `flutter test` と `make maestro-test` を同時に実行してはならない
-- `flutter test` を複数同時に実行してはならない
-- 1つのテストが完了してから、次のテストを実行すること
-- バックグラウンド実行（`&` や `run_in_background`）でテストを並列化してはならない
+#### 禁止される行為（違反厳禁）
 
-### 実行手順
+1. **同一メッセージ内で複数の Bash tool call にテストコマンドを含めること** — テスト系コマンドを含む Bash tool call は、1回のメッセージにつき最大1つ。他の Bash tool call と並列に発行してはならない
+2. `flutter test` と `make maestro-test` を同時に実行すること
+3. `flutter test` を複数同時に実行すること（異なるファイル指定でも不可）
+4. バックグラウンド実行（`&` や `run_in_background: true`）でテストを走らせること
+5. `flutter test` を grep/tail パイプ付きで並列に複数回実行すること
 
-1. **出力をファイルに保存する**: `flutter test > /tmp/test_output.txt 2>&1`
-2. **完了を待つ**: 必ずコマンドの終了を待つ
-3. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する
+#### 正しい実行手順
+
+1. **1つのテストコマンドだけを実行する**: `flutter test > /tmp/test_output.txt 2>&1`
+2. **完了を待つ**: 必ずコマンドの終了を待ってから次のアクションに進む
+3. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する（これは次のメッセージで行う）
 4. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 -E 'FAILED|══.*Exception|Expected:' /tmp/test_output.txt`
-
-### 禁止事項
-
-- `flutter test` を grep/tail パイプ付きで**並列に複数回実行しない**（テストスイート全体が毎回走り非効率なため）
-- テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う
+5. テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う（テストを再実行しない）
 
 ## TDDサイクル
 

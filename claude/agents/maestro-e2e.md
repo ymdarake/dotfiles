@@ -22,38 +22,35 @@ Flutter タイムトラッカーアプリの UI 自動テストを担当する�
 
 ## テスト実行ルール
 
-### ⚠️ 絶対ルール: 同時実行禁止（全テストコマンド共通）
+### ⚠️ 絶対ルール: テストの同時実行は一切禁止
 
-**テストコマンド（`make maestro-test`、`flutter test`、`make maestro-test-flow` 等）は、種類を問わず、常にただ1つだけ実行すること。**
+**テストコマンド（`make maestro-test`、`make maestro-test-flow`、`flutter test`、`dart analyze` 等）は、1回のメッセージで必ず1つだけ実行すること。**
 
-- `make maestro-test` と `flutter test` を同時に実行してはならない
-- `make maestro-test` を複数同時に実行してはならない
-- `flutter test` を複数同時に実行してはならない
-- **1つのテストコマンドが完了してから、次のテストコマンドを実行すること**
-- バックグラウンド実行（`&` や `run_in_background`）でテストを並列化してはならない
+#### 禁止される行為（違反厳禁）
+
+1. **同一メッセージ内で複数の Bash tool call にテストコマンドを含めること** — テスト系コマンドを含む Bash tool call は、1回のメッセージにつき最大1つ。他の Bash tool call と並列に発行してはならない
+2. `make maestro-test` と `flutter test` を同時に実行すること
+3. `make maestro-test` を複数同時に実行すること
+4. `flutter test` を複数同時に実行すること（異なるファイル指定でも不可）
+5. バックグラウンド実行（`&` や `run_in_background: true`）でテストを走らせること
+6. テストコマンドを grep/tail パイプ付きで並列に複数回実行すること
 
 このルールは Maestro テストだけでなく、`flutter test` を実行する場合にも同様に適用される。
 
-### Maestro テスト実行手順
+#### Maestro テスト正しい実行手順
 
-1. **出力をファイルに保存する**: `make maestro-test > /tmp/maestro_output.txt 2>&1`
-2. **完了を待つ**: 必ずコマンドの終了を待つ
-3. **末尾のサマリーを確認する**: `tail -n 30 /tmp/maestro_output.txt` で Pass/Fail を判定する
+1. **1つのテストコマンドだけを実行する**: `make maestro-test > /tmp/maestro_output.txt 2>&1`
+2. **完了を待つ**: 必ずコマンドの終了を待ってから次のアクションに進む
+3. **末尾のサマリーを確認する**: `tail -n 30 /tmp/maestro_output.txt` で Pass/Fail を判定する（これは次のメッセージで行う）
 4. **失敗時は grep で失敗箇所を特定する**: `grep -E 'FAILED|══.*Exception|Expected:' /tmp/maestro_output.txt` 等で失敗箇所を特定する
 
-### flutter test 実行手順
+#### flutter test 正しい実行手順
 
-`flutter test` を実行する場合も同じルールに従う:
-
-1. **出力をファイルに保存する**: `flutter test > /tmp/test_output.txt 2>&1`
-2. **完了を待つ**: 必ずコマンドの終了を待つ
-3. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する
+1. **1つのテストコマンドだけを実行する**: `flutter test > /tmp/test_output.txt 2>&1`
+2. **完了を待つ**: 必ずコマンドの終了を待ってから次のアクションに進む
+3. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する（これは次のメッセージで行う）
 4. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 -E 'FAILED|══.*Exception|Expected:' /tmp/test_output.txt`
-
-### 禁止事項
-
-- テストコマンドを grep/tail パイプ付きで**並列に複数回実行しない**（テストスイート全体が毎回走り非常に遅いため）
-- テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う
+5. テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う（テストを再実行しない）
 
 ## ワークフロー (5 Phase)
 
