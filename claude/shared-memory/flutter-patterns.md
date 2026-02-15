@@ -26,10 +26,10 @@
 
 ## invalidateSelf vs 直接 state 更新の判断
 - **カテゴリ**: バグ防止
-- **遭遇回数**: 1
+- **遭遇回数**: 2
 - **発見元**: time-tracker
-- **概要**: Notifier の操作が「別のデータソースに影響する」場合は invalidateSelf() で再フェッチ、「同じデータソース内の変更」なら直接更新。Gemini レビューで発見されたバグ。
-- **具体例**: `DayDetailNotifier.moveEntryToDate` - 移動先 entries で state 更新 → 移動元画面と不整合 → invalidateSelf() に修正
+- **概要**: Notifier の操作が「別のデータソースに影響する」場合は invalidateSelf() で再フェッチ、「同じデータソース内の変更」なら直接更新。IndexedStack で複数ページが Widget ツリーに同時存在する場合、操作元の Notifier で関連する全プロバイダを invalidate する必要がある。
+- **具体例**: (1) `DayDetailNotifier.moveEntryToDate` - 移動先 entries で state 更新 → 移動元画面と不整合 → invalidateSelf() に修正; (2) `TimerNotifier._invalidateLogProviders()` - `daySummariesProvider` のみ invalidate → `activityBreakdownProvider` / `weeklyBreakdownProvider` も追加が必要だった（E2E テストで発見）
 - **スキル化済み**: No
 
 ## Widget テストで画面外ボタンがタップできない問題
