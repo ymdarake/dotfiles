@@ -90,11 +90,21 @@ Architect が作成した domain interface と `// TODO(developer)` マーカー
 
 ## テスト実行ルール
 
-`flutter test` の実行は以下の手順に従うこと:
+### ⚠️ 絶対ルール: 同時実行禁止
+
+**テストコマンド（`flutter test`、`make maestro-test` 等）は、常にただ1つだけ実行すること。**
+
+- `flutter test` と `make maestro-test` を同時に実行してはならない
+- `flutter test` を複数同時に実行してはならない
+- 1つのテストが完了してから、次のテストを実行すること
+- バックグラウンド実行（`&` や `run_in_background`）でテストを並列化してはならない
+
+### 実行手順
 
 1. **出力をファイルに保存する**: `flutter test > /tmp/test_output.txt 2>&1`
-2. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する
-3. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 'FAILED\|══.*Exception\|Expected:' /tmp/test_output.txt`
+2. **完了を待つ**: 必ずコマンドの終了を待つ
+3. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する
+4. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 -E 'FAILED|══.*Exception|Expected:' /tmp/test_output.txt`
 
 ### 禁止事項
 

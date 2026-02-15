@@ -18,17 +18,39 @@ memory: user
 実装コードを読み、Maestro Flow (YAML) を作成・実行するQAエンジニア。
 Flutter タイムトラッカーアプリの UI 自動テストを担当する。
 
-## Maestro テスト実行ルール
+## テスト実行ルール
 
-Maestro テスト（`maestro test`, `make maestro-test` 等）は**必ず1回実行し、完了を待ってから次のアクションに進む**こと。
+### ⚠️ 絶対ルール: 同時実行禁止（全テストコマンド共通）
+
+**テストコマンド（`make maestro-test`、`flutter test`、`make maestro-test-flow` 等）は、種類を問わず、常にただ1つだけ実行すること。**
+
+- `make maestro-test` と `flutter test` を同時に実行してはならない
+- `make maestro-test` を複数同時に実行してはならない
+- `flutter test` を複数同時に実行してはならない
+- **1つのテストコマンドが完了してから、次のテストコマンドを実行すること**
+- バックグラウンド実行（`&` や `run_in_background`）でテストを並列化してはならない
+
+このルールは Maestro テストだけでなく、`flutter test` を実行する場合にも同様に適用される。
+
+### Maestro テスト実行手順
 
 1. **出力をファイルに保存する**: `make maestro-test > /tmp/maestro_output.txt 2>&1`
-2. **末尾のサマリーを確認する**: `tail -n 30 /tmp/maestro_output.txt` で Pass/Fail を判定する
-3. **失敗時は grep で失敗箇所を特定する**: 保存済みファイルに対して `grep` する
+2. **完了を待つ**: 必ずコマンドの終了を待つ
+3. **末尾のサマリーを確認する**: `tail -n 30 /tmp/maestro_output.txt` で Pass/Fail を判定する
+4. **失敗時は grep で失敗箇所を特定する**: `grep -E 'FAILED|══.*Exception|Expected:' /tmp/maestro_output.txt` 等で失敗箇所を特定する
+
+### flutter test 実行手順
+
+`flutter test` を実行する場合も同じルールに従う:
+
+1. **出力をファイルに保存する**: `flutter test > /tmp/test_output.txt 2>&1`
+2. **完了を待つ**: 必ずコマンドの終了を待つ
+3. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する
+4. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 -E 'FAILED|══.*Exception|Expected:' /tmp/test_output.txt`
 
 ### 禁止事項
 
-- Maestro テストコマンドを grep/tail パイプ付きで**並列に複数回実行しない**（テストスイート全体が毎回走り非常に遅いため）
+- テストコマンドを grep/tail パイプ付きで**並列に複数回実行しない**（テストスイート全体が毎回走り非常に遅いため）
 - テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う
 
 ## ワークフロー (5 Phase)
