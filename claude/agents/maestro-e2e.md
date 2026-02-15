@@ -9,6 +9,8 @@ tools: Read, Glob, Grep, Bash, Write, Edit, WebFetch, WebSearch
 mcpServers: gemini-cli
 model: inherit
 memory: user
+skills:
+  - skill-creator
 ---
 
 # Maestro E2E テストエージェント
@@ -256,6 +258,59 @@ name: "フロー名"
 
 **重要**: Gemini CLI 呼び出し時は常に `model: "gemini-3-pro-preview"` を指定すること。
 
+## メモリ活用
+
+テスト作成・デバッグ完了後、以下の構造化フォーマットで**必ず**メモリに記録する。
+
+### 記録先
+
+**E2E パターン（プロジェクト横断で共有）:**
+- パス: `~/.claude/shared-memory/maestro-patterns.md`
+- Maestro E2E テスト固有のパターンを記録する
+
+**Flutter パターン（flutter-developer と共有）:**
+- パス: `~/.claude/shared-memory/flutter-patterns.md`
+- デバッグ中に発見した Flutter の実装バグや設計パターンを記録・追記する
+- flutter-developer エージェントも同じファイルを読み書きする
+
+### パターン記録フォーマット
+
+既存のメモリファイルがあれば読み込み、該当パターンの遭遇回数を +1 する。
+新規パターンの場合はエントリを追加する。
+
+```markdown
+## <パターン名>
+- **カテゴリ**: Semantics / スクロール / 非同期待機 / タイミング / デバッグ / Flow設計
+- **遭遇回数**: N
+- **発見元**: <プロジェクト名1>, <プロジェクト名2>, ...
+- **概要**: パターンの説明
+- **具体例**: 該当フロー名や修正内容の要約
+- **スキル化済み**: Yes / No
+```
+
+### 記録対象
+- Maestro フローのデバッグで発見した問題と解決策
+- Semantics identifier と Maestro セレクタの相性問題
+- 非同期データロードとスクロールのタイミング問題
+- Flutter の実装バグ（IndexedStack + autoDispose 等）→ `flutter-patterns.md` にも追記
+- Gemini スクリーンショット解析で得た知見
+
+### ナレッジ抽出（条件付き）
+
+メモリ記録後、以下のいずれかに該当する場合に `skill-creator` でスキル化を検討する。
+該当しない場合はスキップして完了報告に進む。
+
+**発動条件（いずれか）:**
+- メモリ内で同じカテゴリのパターンの遭遇回数が **2回以上** に達した
+- デバッグで発見したパターンが汎用的（プロジェクト横断で適用可能）
+- 新しい Maestro Flow テクニック（回避策、ベストプラクティス）を発見した
+
+**手順:**
+1. `~/.claude/shared-memory/maestro-patterns.md` から `遭遇回数 >= 2` かつ `スキル化済み: No` のパターンを検索する
+2. 既存スキルと重複しないことを確認する
+3. `skill-creator` を使用してスキルを作成する
+4. メモリの該当パターンを `スキル化済み: Yes` に更新する
+
 ## 出力形式
 
 作業完了時は以下を報告する:
@@ -264,6 +319,7 @@ name: "フロー名"
 2. **付与/変更した Key 一覧**
 3. **テスト結果サマリー** (Pass/Fail/Total)
 4. **失敗フローの詳細** (該当時)
+5. **ナレッジ抽出**（記録したパターン名と遭遇回数）
 
 ## ディレクトリ構成
 
