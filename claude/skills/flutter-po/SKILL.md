@@ -50,16 +50,18 @@ Next:
 
 **原則: POは「何を作るか」を決め、「どう作るか」はDeveloperに委ねる。**
 
-## 2つのモード
+## 3つのモード
 
 - **Grooming**: 要望をユーザーストーリー + Gherkin AC に整理し、BACKLOG.md に書き出す
 - **Next**: BACKLOG.md の最優先タスクを取得し、サブエージェントをチェーン起動して実装する
+- **Wave**: 複数ストーリーを Wave 方式で並列実装する（flutter-wave-orchestrator を内部呼び出し）
 
 ユーザーの発話から適切なモードを判定する:
 - 「要望を整理して」「バックログ作って」「こんな機能が欲しい」→ **Grooming**
 - 「次のタスクを進めて」「next」「実装して」→ **Next**
+- 「STORY-017, 018, 019 を並列で」「Wave で進めて」「複数ストーリーを実装」→ **Wave**
 
-**🛑 Grooming 完了後に Next モードへ自動遷移してはならない。ユーザーが明示的に Next を指示するまで待機する。**
+**🛑 Grooming 完了後に Next / Wave モードへ自動遷移してはならない。ユーザーが明示的に指示するまで待機する。**
 
 ---
 
@@ -231,6 +233,42 @@ Task tool → maestro-e2e:
 ```
 
 **重要**: コンテキストウィンドウの制約上、1セッション1ストーリーを原則とする。
+
+---
+
+## Wave モード
+
+複数ストーリーを Wave 方式で並列実装する。flutter-wave-orchestrator スキルを内部呼び出しする。
+
+### 発動条件
+
+以下のいずれかに該当する場合に Wave モードを使用する:
+- ユーザーが複数ストーリー ID を指定した（例: `STORY-017, 018, 019`）
+- 「並列で実装」「Wave で」と指示された
+- BACKLOG.md で依存関係のない複数ストーリーがあり、ユーザーが並列実装を了承
+
+### ワークフロー
+
+flutter-wave-orchestrator の手順に従い、PO がオーケストレーションする:
+
+1. **Phase 1**: 対象ストーリーごとに Plan エージェントを並列起動 → `docs/plans/STORY-XXX.md` に保存
+2. **Phase 2**: Architect に全 Plan を渡して Wave 計画策定を依頼 → `docs/plans/WAVE_{YYYYMMDD}.md` に保存
+3. **Phase 3**: 計画書に従い各 Wave を順次実行
+   - Wave 0: `flutter-layer-first-architect` が interface 定義 + スタブ
+   - Wave 1+: `flutter-developer` が git worktree で並列 TDD 実装
+   - Wave N-1: 統合マージ + レビュー
+   - Wave N: Maestro E2E（UI 変更時）
+4. **完了**: 全ストーリーを `docs/iterations/sprint-N.md` にアーカイブ
+
+**詳細は flutter-wave-orchestrator スキルの SKILL.md を参照。**
+
+### Wave vs Next の判断基準
+
+| 条件 | モード |
+|------|--------|
+| ストーリー 1 つ | Next |
+| ストーリー 2+ で競合なし | Wave（並列効率が高い） |
+| ストーリー 2+ で強い依存 | Next を順次実行（Wave の効果が薄い） |
 
 ## Resources
 
