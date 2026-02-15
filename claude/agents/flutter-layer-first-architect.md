@@ -35,6 +35,7 @@ lib/
 │
 ├── domain/<feature>/                 # インターフェースのみ（実装なし）
 │   ├── model.dart                    # ドメインモデル（Entity/ValueObject）
+│   ├── error.dart                    # エラー型（sealed class）
 │   ├── service.dart                  # ビジネスロジックのインターフェース
 │   └── repository.dart               # データアクセスのインターフェース
 │
@@ -248,6 +249,48 @@ lib/
 - 循環依存の禁止: feature A の Service が feature B の Service を呼ぶ場合、B → A の依存は作らない
 - 3つ以上のfeatureを横断する場合は、ユースケースの分割を検討する
 
+### 9. Error Handling Guidelines
+
+#### 配置ルール
+
+- エラー型は `lib/domain/<feature>/error.dart` に定義する
+- `model.dart`（正常な状態と振る舞い）と `error.dart`（異常な状態と制約違反）を分離する
+- 1 feature につき 1 つの `error.dart` ファイル
+
+#### 構造ルール
+
+- `sealed class` でベースエラー型を定義（例: `TrackingError`）
+- `final class` で具体的なエラーケースを定義
+- `const` コンストラクタのみ（状態を持たないマーカー型が基本）
+
+```dart
+// domain/<feature>/error.dart
+sealed class <Feature>Error {
+  const <Feature>Error();
+}
+
+final class <SpecificConstraint>Error extends <Feature>Error {
+  const <SpecificConstraint>Error();
+}
+```
+
+#### 命名ルール
+
+- エラー名はビジネスルールや制約違反を表現する
+  - 良い例: `AlreadyRunningError`, `EmptyNameError`, `InvalidTimeRangeError`
+  - 悪い例: `DatabaseConnectionError`, `SqliteError`（技術的な障害名は使わない）
+
+#### 禁止事項
+
+- エラークラスに UI 表示用メッセージをハードコードしない（l10n 対応のため）
+- メッセージへの変換は UI 層の責務（ViewModel でのパターンマッチング等）
+
+#### Service/Repository シグネチャとの関係
+
+- 期待される失敗（ビジネスルール違反等）には例外を throw せず `Result<S, E>` を返す
+- Infrastructure 層でサードパーティ例外（DB例外等）をキャッチし domain エラーに変換する
+- 予期しない例外（プログラムバグ等）は `Result` でラップせず、そのまま throw させる
+
 ## 分析ワークフロー
 
 ### Step 1: 既存構成の探索
@@ -273,10 +316,10 @@ lib/
 ### Step 3: domain層のinterface設計提案
 
 各featureについて:
-1. モデル（Entity/ValueObject）の定義
-2. Repositoryインターフェースの定義（CRUD + カスタムクエリ）
-3. Serviceインターフェースの定義（ビジネスルール）
-4. エラー型の定義（sealed class）
+1. モデル（Entity/ValueObject）の定義（`model.dart`）
+2. エラー型の定義（sealed class → `error.dart` に配置）
+3. Repositoryインターフェースの定義（CRUD + カスタムクエリ）
+4. Serviceインターフェースの定義（ビジネスルール）
 
 ### Step 4: Resultパターンの適用箇所特定
 
@@ -310,7 +353,8 @@ lib/
 ### 作成するもの
 
 1. **Domain 層（完全な実装）**
-   - `lib/domain/<feature>/model.dart` — Entity / ValueObject / エラー型(sealed class)
+   - `lib/domain/<feature>/model.dart` — Entity / ValueObject
+   - `lib/domain/<feature>/error.dart` — エラー型（sealed class + 具象 final class）
    - `lib/domain/<feature>/service.dart` — Service の abstract interface class
    - `lib/domain/<feature>/repository.dart` — Repository の abstract interface class
 
