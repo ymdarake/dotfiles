@@ -20,6 +20,8 @@ user_invocable: true
 ```
 Grooming: ヒアリング → ストーリー作成 → BACKLOG.md 書き出し → 🛑 ユーザー承認待ち（ここで終了）
 
+Plan: BACKLOG.md → 対象ストーリー特定 → Plan エージェント並列起動 → docs/plans/ に保存 → 🛑 終了
+
 Next:
   Step 1: ストーリー取得（BACKLOG.md → In Progress）
   Step 1.5: 影響分析（Plan エージェント → 事実の探索と整理 → docs/plans/ に保存）
@@ -50,18 +52,20 @@ Next:
 
 **原則: POは「何を作るか」を決め、「どう作るか」はDeveloperに委ねる。**
 
-## 3つのモード
+## 4つのモード
 
 - **Grooming**: 要望をユーザーストーリー + Gherkin AC に整理し、BACKLOG.md に書き出す
+- **Plan**: BACKLOG.md の対象ストーリーの影響分析を一括生成し、docs/plans/ に保存する
 - **Next**: BACKLOG.md の最優先タスクを取得し、サブエージェントをチェーン起動して実装する
 - **Wave**: 複数ストーリーを Wave 方式で並列実装する（flutter-wave-orchestrator を内部呼び出し）
 
 ユーザーの発話から適切なモードを判定する:
 - 「要望を整理して」「バックログ作って」「こんな機能が欲しい」→ **Grooming**
+- 「計画だけ先に」「Plan を作って」「影響分析して」→ **Plan**
 - 「次のタスクを進めて」「next」「実装して」→ **Next**
 - 「STORY-017, 018, 019 を並列で」「Wave で進めて」「複数ストーリーを実装」→ **Wave**
 
-**🛑 Grooming 完了後に Next / Wave モードへ自動遷移してはならない。ユーザーが明示的に指示するまで待機する。**
+**🛑 Grooming 完了後に Next / Wave / Plan モードへ自動遷移してはならない。ユーザーが明示的に指示するまで待機する。**
 
 ---
 
@@ -87,6 +91,27 @@ BACKLOG.md の `Current Sprint` を確認する。
 6. **書き出し**: [backlog-template.md](references/backlog-template.md) のフォーマットに従い `BACKLOG.md` に書き出す
 
 **重要**: 書き出し後、ユーザーに確認を求める。承認されるまで実装には進まない。
+
+---
+
+## Plan モード
+
+BACKLOG.md の対象ストーリーの影響分析（docs/plans/STORY-XXX.md）を一括生成する。
+実装には進まない。Next / Wave の事前準備として使用する。
+
+### ワークフロー
+
+1. BACKLOG.md を読み、対象ストーリーを特定する
+   - ユーザーがストーリー ID を指定した場合 → 指定されたストーリーのみ
+   - 指定なしの場合 → Current Sprint 内の Status が `Todo` の全ストーリー
+2. 既に docs/plans/STORY-XXX.md が存在するストーリーはスキップする（上書きしない）
+   - ユーザーが明示的に再生成を指示した場合は上書きする
+3. 対象ストーリーごとに Task tool で Plan エージェント（subagent_type: Plan）を並列起動する
+   （プロンプトは Next モード Step 1.5 と同一）
+4. 各 Plan エージェントの出力を PO が docs/plans/STORY-XXX.md に Write で保存する（Plan エージェントは Write 権限を持たないため）
+5. 全ストーリーの Plan 完了後、一覧を表示して終了する
+
+🛑 Plan モード完了後、Next / Wave モードへ自動遷移しない。
 
 ---
 
@@ -133,6 +158,7 @@ Plan エージェントの出力を PO が `docs/plans/STORY-XXX.md` に Write �
 保存後、影響範囲の妥当性・漏れがないかをチェックしてから Step 2 に進む。
 
 **スキップ条件**（以下の場合は Step 1.5 を省略して Step 2 に進む）:
+- `docs/plans/STORY-XXX.md` が既に存在する場合（Plan モードで生成済み）
 - E2E フローの修正のみ（lib/ 変更なし）
 - 単純な1ファイル変更
 - ユーザーが既に詳細な計画を提供済み
@@ -252,6 +278,7 @@ Task tool → maestro-e2e:
 flutter-wave-orchestrator の手順に従い、PO がオーケストレーションする:
 
 1. **Phase 1**: 対象ストーリーごとに Plan エージェントを並列起動 → `docs/plans/STORY-XXX.md` に保存
+   - Plan モードで事前生成済みの場合、Phase 1 をスキップする。
 2. **Phase 2**: Architect に全 Plan を渡して Wave 計画策定を依頼 → `docs/plans/WAVE_{YYYYMMDD}.md` に保存
 3. **Phase 3**: 計画書に従い各 Wave を順次実行
    - Wave 0: `flutter-layer-first-architect` が interface 定義 + スタブ
