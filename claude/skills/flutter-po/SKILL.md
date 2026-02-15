@@ -22,7 +22,8 @@ Grooming: ヒアリング → ストーリー作成 → BACKLOG.md 書き出し 
 
 Next:
   Step 1: ストーリー取得（BACKLOG.md → In Progress）
-  Step 2: Architect 起動（interface + スタブ + TODO 作成）→ 完了報告を確認
+  Step 1.5: 影響分析（Plan エージェント → 事実の探索と整理 → docs/plans/ に保存）
+  Step 2: Architect 起動（影響分析を基に設計判断 + interface + スタブ + TODO 作成）→ 完了報告を確認
   Step 3: Developer 起動（TDD サイクル）→ 完了報告を評価
   Step 4: 中間品質ゲート（成功→続行 / 失敗→再起動1回 / 曖昧→エスカレーション）
   Step 5: E2E テスト（UI変更時のみ。maestro-e2e 起動）
@@ -37,6 +38,7 @@ Next:
 - BACKLOG.md の作成・更新（ユーザーストーリー + AC）
 - サブエージェントの起動と結果評価（オーケストレーション）
 - 品質ゲートの判定とエスカレーション判断
+- Plan エージェントの出力確認（影響範囲が妥当か、漏れがないか）
 - Architect の完了報告の確認（interface 設計 + TODO マーカーの妥当性）
 
 ❌ POが絶対にしてはいけないこと:
@@ -95,17 +97,62 @@ BACKLOG.md の最優先の未完了ストーリーを取得し、サブエージ
 `BACKLOG.md` を読み、Status が `Todo` の最優先ストーリーを取得する。
 該当ストーリーの Status を `In Progress` に更新する。
 
+### Step 1.5: 影響分析（Plan）
+
+Task tool で `Plan` エージェント（`subagent_type: Plan`）を起動し、
+コードベースの深い探索と影響分析を行わせる。
+
+**Plan の責務は「事実の探索と整理」に限定する。設計判断は Architect の責務。**
+
+Plan の出力は `docs/plans/STORY-XXX.md` にファイルとして保存する。
+これにより Architect / Developer がコンテキストに依存せず `Read` で参照できる。
+
+```
+Task tool → Plan:
+"以下のユーザーストーリーに対して、コードベースを探索し影響分析を行ってください。
+設計判断は不要です。事実の収集と整理に徹してください。
+
+プロジェクトルート: <path>
+
+ストーリー: [STORY-XXX] <タイトル>
+受け入れ条件: <Gherkin AC>
+Technical Notes: <BACKLOG.md の Technical Notes>
+
+以下を出力してください:
+1. 関連ファイル一覧（パス + 該当行番号 + 現在の役割・内容の要約）
+2. 既存の設計パターン（関連箇所で使われている Riverpod パターン、レイヤー構成等）
+3. 既存テストの現状（関連テストファイル + カバー範囲）
+4. AC 実現に必要な変更箇所の候補（何を変えるかの事実列挙。どう変えるかは書かない）"
+```
+
+Plan エージェントの出力を PO が `docs/plans/STORY-XXX.md` に Write で保存する
+（Plan エージェントは Write ツールを持たないため、PO が代行する）。
+
+保存後、影響範囲の妥当性・漏れがないかをチェックしてから Step 2 に進む。
+
+**スキップ条件**（以下の場合は Step 1.5 を省略して Step 2 に進む）:
+- E2E フローの修正のみ（lib/ 変更なし）
+- 単純な1ファイル変更
+- ユーザーが既に詳細な計画を提供済み
+
 ### Step 2: 構造分析 + interface 作成（Architect）
 
-Task tool で `flutter-layer-first-architect` エージェントを起動し、構造探索 → interface 作成 → TODO マーカー付与を委譲する。
+Task tool で `flutter-layer-first-architect` エージェントを起動し、Plan の影響分析を基に設計判断 → interface 作成 → TODO マーカー付与を委譲する。
 
 ```
 Task tool → flutter-layer-first-architect:
-"以下のユーザーストーリーに対して、プロジェクトの既存構造を探索し、
-必要な domain interface の作成と実装スタブ（TODO マーカー付き）を作成してください。
+"Plan エージェントが影響分析を作成済みです。
+まず docs/plans/STORY-XXX.md を Read で読み込み、
+影響分析の内容を踏まえて設計判断を行い、必要な domain interface の作成と実装スタブ（TODO マーカー付き）を作成してください。
 
-ユーザーストーリー: <ストーリー内容>
-受け入れ条件: <Gherkin AC>"
+## 影響分析ファイル
+docs/plans/STORY-XXX.md
+
+## ユーザーストーリー
+<ストーリー内容>
+
+## 受け入れ条件
+<Gherkin AC>"
 ```
 
 Architect の完了報告を確認する:
@@ -127,6 +174,9 @@ Task tool → flutter-developer:
 
 ストーリー: [STORY-XXX] <タイトル>
 受け入れ条件: <Gherkin AC>
+
+影響分析: docs/plans/STORY-XXX.md
+（実装判断に迷った場合、影響分析の内容を参考にしてください）
 
 1. `// TODO(developer)` マーカーを検索して実装箇所を把握する
 2. interface に対するテストを書く（Red）
