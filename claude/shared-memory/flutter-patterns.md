@@ -104,6 +104,30 @@
 - **具体例**: `_TimerPageState._resolveActivityColor` で match.isEmpty の場合 `Color(ActivityData.defaultColorValue)` を返す
 - **スキル化済み**: No
 
+## FOUC 防止: Future.wait で並列取得 + 1回の state 更新
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: Notifier の初期化/復元処理で複数の非同期データ取得を逐次実行すると、各 await 後に state を更新するため中間状態が一瞬描画される（FOUC）。`Future.wait` で並列取得し、結果を1回の `state =` でまとめて反映することで解消する。テストは `container.listen` で state 変更回数をカウントして1回のみであることを検証する。
+- **具体例**: `TimerNotifier.restoreState()` - `restoreSession()` + `getActiveActivities()` を `Future.wait` で並列取得、stopped/非 stopped の分岐で1回だけ state 更新
+- **スキル化済み**: No
+
+## Riverpod 3 の StateProvider 廃止
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: Riverpod 3.x では StateProvider が廃止されている。代わりに NotifierProvider を使い、Notifier クラスに state 変更メソッドを定義する。同様に valueOrNull も廃止されており、value で代替する。
+- **具体例**: `selectedActivityProvider` を `NotifierProvider<SelectedActivityNotifier, ActivityData?>` で定義。`select(ActivityData?)` メソッドで state を変更。
+- **スキル化済み**: No
+
+## DropdownButton の等価性問題: id ベース比較
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: DropdownButton の value にカスタムクラスのインスタンスを使用すると、異なるインスタンスでも同じ論理値を指す場合に value の一致判定が失敗する（== / hashCode 未定義の場合）。回避策として、DropdownButton<int?> で id を value にし、onChanged で id からインスタンスを逆引きする。
+- **具体例**: `_ActivityFilterDropdown` で `DropdownButton<int?>` を使用、value は `selectedActivity?.id`、onChanged で `activeActivities.firstWhere((a) => a.id == activityId)` で逆引き
+- **スキル化済み**: No
+
 ## Drift storeDateTimeAsText と customSelect の組み合わせ
 - **カテゴリ**: バグ防止
 - **遭遇回数**: 2
