@@ -21,41 +21,40 @@ docs/plans/WAVE_{YYYYMMDD}.md（※ {YYYYMMDD} は実際の日付に置換）
 - 既存テストを壊さないこと（`flutter test` で確認）"
 ```
 
-## Wave 1+: Developer 並列起動
+## Wave 1+: Developer 並列起動（tmux メッセージングモデル）
 
-各ストーリーごとに独立した Task tool で起動する。
+Task tool ではなく、tmux で独立した Claude インスタンスを起動する。
+PO は以下の 3 ステップで各 Developer を起動する。
 
+### Step 1: INSTRUCTION.md の作成
+
+PO が各 worktree ルートに INSTRUCTION.md を Write で作成する。
+フォーマット: [instruction-template.md](instruction-template.md)
+
+PO の tmux ペイン ID は以下で取得:
+```bash
+tmux display-message -p '#{session_name}:#{window_index}.#{pane_index}'
 ```
-Task tool → flutter-developer:
-"以下のユーザーストーリーを TDD サイクルで実装してください。
 
-## 作業ディレクトリ
-../<project>-story-XXX（git worktree）
+### Step 2: tmux new-window で Claude CLI 起動
 
-## ストーリー
-[STORY-XXX] <タイトル>
+各ストーリーごとに tmux で新ウィンドウを作成し、Developer を起動する。
 
-## 受け入れ条件
-<Gherkin AC>
-
-## 影響分析
-docs/plans/STORY-XXX.md を参照
-
-## Wave 計画書
-docs/plans/WAVE_{YYYYMMDD}.md（※ {YYYYMMDD} は実際の日付に置換） の、あなたが担当する Wave セクションを参照
-
-## 実装手順
-1. `// TODO(developer): STORY-XXX` マーカーを検索して実装箇所を把握
-2. interface に対するテストを書く（Red）
-3. TODO を実装してテストを通す（Green）
-4. リファクタリング（Refactor）
-5. `dart analyze` + `flutter test` で品質確認
-
-## 注意事項
-- ⚠️ 全てのファイル読み込み・編集・コマンド実行は、必ず指定された作業ディレクトリ内で行うこと。メインリポジトリのファイルには一切触れない
-- このストーリーのスコープ外の変更はしない
-- 共有 interface に不足がある場合は、実装せず報告して停止"
+```bash
+tmux new-window -n "story-xxx" -c "../<project>-story-xxx" \
+  "claude --agent flutter-developer \
+    --permission-mode bypassPermissions \
+    'INSTRUCTION.md を読んで指示に従って TDD サイクルで実装してください' \
+    2>&1 | tee /tmp/claude-story-xxx.log; \
+  touch /tmp/claude-story-xxx-exited"
 ```
+
+### Step 3: 完了通知の受信と report.md の読み取り
+
+Developer が実装完了すると tmux send-keys で PO に通知が届く。
+PO は report.md を Read し、品質ゲート（YAML Frontmatter）を確認する。
+
+フォールバック: `/tmp/claude-story-xxx-exited` で異常終了を検知。
 
 ## Wave N-1: 統合マージ + レビュー
 

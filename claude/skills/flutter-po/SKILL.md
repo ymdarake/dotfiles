@@ -282,7 +282,9 @@ flutter-wave-orchestrator の手順に従い、PO がオーケストレーショ
 2. **Phase 2**: Architect に全 Plan を渡して Wave 計画策定を依頼 → `docs/plans/WAVE_{YYYYMMDD}.md` に保存
 3. **Phase 3**: 計画書に従い各 Wave を順次実行
    - Wave 0: `flutter-layer-first-architect` が interface 定義 + スタブ
-   - Wave 1+: `flutter-developer` が git worktree で並列 TDD 実装
+   - Wave 1+: PO が tmux で worktree ごとに `claude --agent flutter-developer` を起動。
+     INSTRUCTION.md → report.md → tmux send-keys によるファイルベースメッセージングで管理。
+     （Task tool ではなく独立 Claude インスタンスで実行。詳細は flutter-wave-orchestrator を参照）
    - Wave N-1: 統合マージ + レビュー
    - Wave N: Maestro E2E（UI 変更時）
 4. **完了**: 全ストーリーを `docs/iterations/sprint-N.md` にアーカイブ

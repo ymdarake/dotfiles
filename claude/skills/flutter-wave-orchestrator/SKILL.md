@@ -39,7 +39,7 @@ Phase 2: Wave 計画策定（flutter-layer-first-architect）
 
 Phase 3: Wave 実行（PO がオーケストレーション）
   → Wave 0: flutter-layer-first-architect が interface 定義 + スタブ実装
-  → Wave 1+: flutter-developer が git worktree で並列実装
+  → Wave 1+: tmux で worktree ごとに Claude --agent flutter-developer を起動（メッセージングモデル）
   → Wave N-1: 統合レビュー
   → Wave N: maestro-e2e
 ```
@@ -124,25 +124,91 @@ PO は以下を確認してから Phase 3 に進む:
 - [ ] 各ストーリー向けの TODO マーカーが配置済み
 - [ ] master にコミット済み
 
-### Wave 1+: 並列実装
+### Wave 1+: 並列実装（tmux メッセージングモデル）
 
-**実行者: PO（セットアップ） → `flutter-developer`（実装）**
+**実行者: PO（セットアップ + 待機） → `flutter-developer`（各 worktree で自律実装）**
 
-PO が git worktree をセットアップし、各 `flutter-developer` を Task tool で並列起動する。
-（※ 複数の Task tool 呼び出しを1つのレスポンスに含めることで並列実行される）
+#### Why tmux?
+Task tool のサブエージェントは cwd がメインプロジェクトに固定され、worktree 内のファイルに
+パーミッションパターンが届かない。tmux で独立した Claude インスタンスを起動することで解決する。
+
+#### Step 1: worktree セットアップ
 
 ```bash
 # PO: worktree セットアップ（Wave 0 完了後、メインリポジトリで実行）
 git worktree add ../<project>-story-xxx -b feature/story-xxx
+cp -r .claude ../<project>-story-xxx/
 (cd ../<project>-story-xxx && flutter pub get)
 # ※ サブシェルで実行するためカレントディレクトリは変わらない
+# ※ .claude/ を必ずコピーする（worktree には自動コピーされない）
 # ※ クリーンアップはここではやらない。Wave N-1 のマージ完了後に行う
 ```
 
-**品質ゲート（各 Wave → 次 Wave の条件）:**
-- [ ] 各 worktree で `dart analyze` パス
-- [ ] 各 worktree で `flutter test` パス
-- [ ] `flutter-developer` の完了報告に Critical/High 指摘なし
+#### Step 2: INSTRUCTION.md の配置
+
+PO が各 worktree ルートに INSTRUCTION.md を Write で作成する。
+フォーマット: [instruction-template.md](references/instruction-template.md)
+
+PO の tmux ペイン ID を含める（Developer が完了通知を送る宛先）。
+PO は自身の tmux ペイン ID を以下で取得する:
+```bash
+tmux display-message -p '#{session_name}:#{window_index}.#{pane_index}'
+```
+
+#### Step 3: tmux で Developer 起動
+
+PO が tmux で新ウィンドウを作成し、Claude CLI を起動する。
+
+```bash
+tmux new-window -n "story-xxx" -c "../<project>-story-xxx" \
+  "claude --agent flutter-developer \
+    --permission-mode bypassPermissions \
+    'INSTRUCTION.md を読んで指示に従って TDD サイクルで実装してください' \
+    2>&1 | tee /tmp/claude-story-xxx.log; \
+  touch /tmp/claude-story-xxx-exited"
+```
+
+| オプション | 値 | 理由 |
+|-----------|-----|------|
+| `--agent` | `flutter-developer` | Developer エージェント定義を使用 |
+| `--permission-mode` | `bypassPermissions` | worktree 内で自律実行（対話承認不可のため必須） |
+| (対話モード) | `-p` なし | スキル（flutter-tdd-cycle 等）が使える。プロセス完了時に tmux send-keys で PO に通知 |
+
+#### Step 4: 完了報告の受信（イベント駆動）
+
+Developer は実装完了時に:
+1. worktree ルートに `report.md` を Write（フォーマット: [report-template.md](references/report-template.md)）
+2. tmux send-keys で PO に通知:
+```bash
+# ベストプラクティス: C-c で行クリア → -l でリテラル送信 → Enter
+tmux send-keys -t <PO-pane> C-c
+tmux send-keys -t <PO-pane> -l '[STORY-XXX] 完了。Read <absolute-path>/report.md'
+tmux send-keys -t <PO-pane> Enter
+```
+
+**tmux send-keys の注意点:**
+- `C-c` を先に送って PO のプロンプト行をクリアする（既存入力があると混ざるため）
+- `-l` フラグでリテラル送信（特殊文字の解釈を防ぐ）
+- ターゲットは `session:window.pane` 形式で正確に指定（INSTRUCTION.md に記載）
+- PO が処理中の場合、キー入力はバッファされ、処理完了後に受信される
+
+PO は通知を「ユーザー入力」として受信し、report.md を Read して品質ゲート判定する。
+ポーリング不要。
+
+**フォールバック**: Developer が通知を送れなかった場合（クラッシュ等）:
+- `/tmp/claude-story-xxx-exited` の存在で異常終了を検知
+- `/tmp/claude-story-xxx.log` でエラー原因を確認
+
+#### 品質ゲート（各 Wave → 次 Wave の条件）
+
+report.md の YAML Frontmatter で判定:
+
+- [ ] `result: success`
+- [ ] `dart_analyze: pass`
+- [ ] `flutter_test: pass`
+- [ ] `critical_issues: 0`
+- [ ] `high_issues: 0`
+- [ ] `interface_insufficient: false`
 
 ### Wave N-1: 統合マージ + レビュー
 
@@ -202,6 +268,18 @@ Wave 1+ の実装中に「共有 interface が不足」と判明した場合:
 | 設計不備 | `flutter-layer-first-architect` に差し戻し |
 | 仕様曖昧 | ユーザーにエスカレーション |
 
+### Developer プロセスが異常終了した場合
+
+1. `/tmp/claude-story-xxx-exited` が存在するが tmux send-keys 通知が来ない → 異常終了
+2. `/tmp/claude-story-xxx.log` でエラー原因を確認
+3. INSTRUCTION.md を修正して tmux new-window で再起動（1回のみ）
+
+### タイムアウト
+
+- 対話モードのため `--max-budget-usd` は使用不可。PO が手動でタイムアウト判断する
+- 30分経過しても通知が来ない場合、`tmux list-windows` でプロセス状態を確認
+- 必要に応じて `tmux send-keys -t "story-xxx" C-c` で中断
+
 ## Resources
 
 ### references/
@@ -209,3 +287,5 @@ Wave 1+ の実装中に「共有 interface が不足」と判明した場合:
 - **[architect-wave-planning.md](references/architect-wave-planning.md)**: Architect への Wave 計画策定依頼プロンプト
 - **[wave-plan-template.md](references/wave-plan-template.md)**: Wave 計画書のフォーマット
 - **[wave-prompts-template.md](references/wave-prompts-template.md)**: 各 Wave のサブエージェント起動プロンプト集
+- **[instruction-template.md](references/instruction-template.md)**: Developer への INSTRUCTION.md フォーマット
+- **[report-template.md](references/report-template.md)**: Developer の report.md フォーマット
