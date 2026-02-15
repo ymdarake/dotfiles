@@ -16,6 +16,7 @@ skills:
   - flutter-dialog
   - stale-state-guard
   - skill-creator
+  - flutter-fl-chart-test
 ---
 
 # Flutter Developer エージェント
@@ -80,6 +81,45 @@ Architect が作成した domain interface と `// TODO(developer)` マーカー
 
 - Service / Repository は例外を throw せず `Result` を返す
 - エラー型は `sealed class` で定義する
+
+## 実装時の注意事項
+
+### Notifier 実装時の確認事項（invalidateSelf パターン）
+
+Notifier でデータ変更操作を実装する際、以下を確認する:
+
+1. **「この操作は別のデータソースに影響するか？」**
+   - Yes → `invalidateSelf()` で再フェッチ（直接 state 更新ではなく）
+   - No → 直接 state 更新で可
+2. **IndexedStack で複数ページが同時存在する場合**、操作元の Notifier で関連する全プロバイダを invalidate する
+   - 例: タイマー停止時に `daySummariesProvider` だけでなく `activityBreakdownProvider` / `weeklyBreakdownProvider` も invalidate
+
+```dart
+// ❌ 移動先 entries で state 直接更新 → 移動元画面と不整合
+state = AsyncData(updatedEntries);
+
+// ✅ invalidateSelf() で再フェッチ → 全画面が最新データを取得
+await ref.read(serviceProvider).moveEntry(entryId, targetDate);
+invalidateSelf();
+```
+
+### Drift customSelect 実装時の注意（storeDateTimeAsText パターン）
+
+`storeDateTimeAsText: true` のプロジェクトで `customSelect` を使う場合:
+
+- **日時比較**: ISO 8601 文字列比較を使用（`Variable.withString(dateTime.toIso8601String())`）
+- **秒差計算**: `strftime('%s', col)` を使う（文字列のまま引き算はできない）
+- **DateTime 変換**: `row.read<String>('col')` → `DateTime.parse()` は **UTC 解析される**ため `.toLocal()` 必須
+
+```dart
+// ❌ UTC のまま使用 → 日本時間で日付がずれる
+final date = DateTime.parse(row.read<String>('started_at'));
+
+// ✅ .toLocal() で変換してから論理日付を取得
+final utc = DateTime.parse(row.read<String>('started_at'));
+final local = utc.toLocal();
+final logicalDate = DateTime(local.year, local.month, local.day);
+```
 
 ## 振る舞い
 

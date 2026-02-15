@@ -14,7 +14,7 @@
 - **発見元**: time-tracker
 - **概要**: ダイアログが複数種類のアクション結果を返す場合、sealed class で型安全に分岐する。sentinel value（-1等）はファイルスコープ内なら許容するが、sealed class のほうが型安全。
 - **具体例**: `_EditDialogResult` → `_TimeEditResult` / `_MoveDateResult` in `day_detail_page.dart`; `_DailyGoalDialog` は sentinel value (-1) で「解除」と「キャンセル」(null) を区別
-- **スキル化済み**: No
+- **スキル化済み**: Yes
 
 ## 未来日付バリデーションの二重防御
 - **カテゴリ**: バグ防止
@@ -30,7 +30,7 @@
 - **発見元**: time-tracker
 - **概要**: Notifier の操作が「別のデータソースに影響する」場合は invalidateSelf() で再フェッチ、「同じデータソース内の変更」なら直接更新。IndexedStack で複数ページが Widget ツリーに同時存在する場合、操作元の Notifier で関連する全プロバイダを invalidate する必要がある。
 - **具体例**: (1) `DayDetailNotifier.moveEntryToDate` - 移動先 entries で state 更新 → 移動元画面と不整合 → invalidateSelf() に修正; (2) `TimerNotifier._invalidateLogProviders()` - `daySummariesProvider` のみ invalidate → `activityBreakdownProvider` / `weeklyBreakdownProvider` も追加が必要だった（E2E テストで発見）
-- **スキル化済み**: No
+- **スキル化済み**: Yes
 
 ## Widget テストで画面外ボタンがタップできない問題
 - **カテゴリ**: テスト
@@ -46,7 +46,7 @@
 - **発見元**: time-tracker
 - **概要**: fl_chart のチャートは CustomPainter で描画するため、テキスト検索では検出できない。`tester.widget<PieChart/BarChart>(find.byType(...)).data` でチャートデータを直接検証する。BarChart の場合は `barGroups[i].barRods[0].toY` で棒の高さ、`.rodStackItems` でスタック構成を検証する。`extraLinesData.horizontalLines` で目標ライン等の補助線も検証可能。
 - **具体例**: `activity_pie_chart_test.dart` - sections を直接アサート; `weekly_stacked_bar_chart_test.dart` - barGroups, rodStackItems, toY を直接アサート; `weekly_stacked_bar_chart_goal_line_test.dart` - horizontalLines の y, color, dashArray, label を検証
-- **スキル化済み**: No
+- **スキル化済み**: Yes
 
 ## FutureProvider.autoDispose + ViewModel 経由の目標達成度パターン
 - **カテゴリ**: 設計
@@ -70,4 +70,4 @@
 - **発見元**: time-tracker
 - **概要**: `storeDateTimeAsText: true` の場合、customSelect で日時比較するとき ISO 8601 文字列で比較し、秒差計算には `strftime('%s', col)` を使う。また、`row.read<String>('date_column')` で取得した文字列を `DateTime.parse()` するとUTCとして解析される場合があるため、`.toLocal()` + `DateTime(y,m,d)` で論理日付に変換する必要がある。
 - **具体例**: `DriftMonthlyReportRepository.getActivityBreakdown` - Variable.withString, strftime 使用; `getWeeklyBreakdown` - DateTime.parse(dateStr).toLocal() で UTC→ローカル変換
-- **スキル化済み**: No
+- **スキル化済み**: Yes
