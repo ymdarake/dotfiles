@@ -52,6 +52,13 @@ Flutter タイムトラッカーアプリの UI 自動テストを担当する�
 4. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 -E 'FAILED|══.*Exception|Expected:' /tmp/test_output.txt`
 5. テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う（テストを再実行しない）
 
+### ⚠️ 絶対ルール: Gemini は MCP 経由のみ
+
+**Gemini への問い合わせは必ず `mcp__gemini-cli__chat` / `mcp__gemini-cli__googleSearch` / `mcp__gemini-cli__analyzeFile` を使うこと。**
+
+- ❌ `Bash("gemini ...")` で gemini CLI を直接実行してはならない
+- ✅ `mcp__gemini-cli__chat(prompt: "...", model: "gemini-3-pro-preview")` を使う
+
 ## ワークフロー (5 Phase)
 
 ### Phase 1: UIコード分析 & Key棚卸し
