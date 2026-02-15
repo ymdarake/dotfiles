@@ -72,6 +72,38 @@
 - **具体例**: `_seedDefaultActivities()` で9件投入 → `drift_activity_repository_test.dart`, `app_database_test.dart`, `tracking_service_impl_test.dart`, `timer_view_model_test.dart`, `timer_page_test.dart` の19テストが影響
 - **スキル化済み**: No
 
+## 機能削除時のテスト整理パターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: UI 機能を削除する際、ソースコードの削除だけでなくテストの3段階整理が必要: (1) 削除対象テストの削除（機能そのもののテスト）、(2) 変更対象テストの更新（削除した機能を参照するテスト）、(3) 新しい振る舞いのテスト追加（削除後の状態を検証）。特に state クラスからフィールドを削除する場合、コンパイルエラーが多数のテストに波及する。
+- **具体例**: STORY-015 selectedActivity 削除 - timer_state_test (4テスト削除), timer_view_model_test (7テスト削除 + SharedPreferences setup 削除), timer_page_test (11テスト削除/変更), goal_progress テスト群の全面更新
+- **スキル化済み**: No
+
+## ViewModel エラーメッセージ二重ラップ防止
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: ViewModel で `StateError('操作エラー: $domainError')` のようにラップし、Page 側の catch でも `'操作エラー: $e'` を付与すると、「操作エラー: Bad state: 操作エラー: ...」のような冗長メッセージになる。修正: ViewModel はドメインエラーをそのまま throw し、Page 側で `_errorMessage(operation, error)` ヘルパーで統一的にメッセージ付与する。
+- **具体例**: `TimerNotifier.startWork` の Failure ケースで `throw error` に変更、`timer_page.dart` に `_errorMessage()` ヘルパー追加
+- **スキル化済み**: No
+
+## Failure 時のアクティブデータリフレッシュ
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: QuickStartGrid 等でキャッシュ済みデータを表示中にバックグラウンドでデータが変更された場合（アーカイブ等）、操作失敗時に `_refreshActiveActivitiesFlag()` を呼んでキャッシュを最新化する。stale-state-guard パターンの Layer 2 防御に該当。
+- **具体例**: `TimerNotifier.startWork` の Failure ケースで `await _refreshActiveActivitiesFlag()` を追加
+- **スキル化済み**: No
+
+## UI フォールバック色パターン
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: activeActivities 一覧からアクティビティを検索して色を解決する場合、アーカイブ済み等で見つからないケースでは null ではなくフォールバック色（defaultColorValue）を返す。null を返すと色が完全に消えてユーザーに視覚的な欠けが生じる。
+- **具体例**: `_TimerPageState._resolveActivityColor` で match.isEmpty の場合 `Color(ActivityData.defaultColorValue)` を返す
+- **スキル化済み**: No
+
 ## Drift storeDateTimeAsText と customSelect の組み合わせ
 - **カテゴリ**: バグ防止
 - **遭遇回数**: 2
