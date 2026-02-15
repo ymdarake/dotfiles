@@ -1,6 +1,14 @@
 {
   "permissions": {
     "allow": [
+      "Read(**/BACKLOG.md)",
+      "Write(**/BACKLOG.md)",
+      "Edit(**/BACKLOG.md)",
+      "Update(**/BACKLOG.md)",
+      "Read(**/docs/plans/*.md)",
+      "Write(**/docs/plans/*.md)",
+      "Edit(**/docs/plans/*.md)",
+      "Update(**/docs/plans/*.md)",
       "Read(**/*.ts)",
       "Read(**/*.tsx)",
       "Read(**/*.js)",
