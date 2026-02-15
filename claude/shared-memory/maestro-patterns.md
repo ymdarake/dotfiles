@@ -26,8 +26,16 @@
 
 ## tooltip ベースのタップは Semantics より安定
 - **カテゴリ**: Flow設計
+- **遭遇回数**: 2
+- **発見元**: time-tracker
+- **概要**: `IconButton` や `PopupMenuButton` に `tooltip` を設定すると、Maestro の `tapOn: "tooltip text"` で確実にタップできる。`Semantics(identifier:)` は入れ子やウィジェットの種類によって検出できない場合があるが、tooltip はアクセシビリティツリーに直接 label として登録されるため安定。リスト内の同一ウィジェットを個別に特定する場合、動的な tooltip (例: `'${name} menu'`) で区別できる。
+- **具体例**: (1) `WeeklyStackedBarChart` の前週/次週ボタン — `Semantics(identifier:)` → `tooltip` + `tapOn` に変更。(2) 設定画面の `PopupMenuButton` — デフォルト tooltip "Show menu" を `'${activity.name} menu'` に変更し、9件のアクティビティを個別にアーカイブ可能に。
+- **スキル化済み**: No
+
+## FAB とリスト末尾アイテムの重なり問題
+- **カテゴリ**: スクロール
 - **遭遇回数**: 1
 - **発見元**: time-tracker
-- **概要**: `IconButton` に `tooltip` を設定すると、Maestro の `tapOn: "tooltip text"` で確実にタップできる。`Semantics(identifier:)` は入れ子やウィジェットの種類によって検出できない場合があるが、tooltip はアクセシビリティツリーに直接 label として登録されるため安定。
-- **具体例**: `WeeklyStackedBarChart` の前週/次週ボタン — `Semantics(identifier: 'maestro_log_week_prev')` → `IconButton(tooltip: '前週')` + `tapOn: "前週"` に変更して解決。
+- **概要**: `Scaffold` の `floatingActionButton` は `ListView` の上にオーバーレイされる。リストの末尾アイテムが画面下部に表示されると、FAB がタップ対象と重なり、Maestro が意図しない要素をタップする。`tapOn` は COMPLETED と報告されるが、実際には FAB が受け取ってしまう。
+- **具体例**: 設定画面の9番目のアクティビティ「食事」の PopupMenuButton と FAB が重なり、FAB がタップされて「アクティビティ追加」ダイアログが開いてしまう。ListView に `padding: EdgeInsets.only(bottom: 80)` を追加して解決。
 - **スキル化済み**: No

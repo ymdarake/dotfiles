@@ -64,6 +64,14 @@
 - **具体例**: `progress_ring_test.dart` - ProgressRing 内の CustomPaint のみを検証するため descendant を使用
 - **スキル化済み**: No
 
+## DB シーディング追加時の既存テスト影響
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: DB の onCreate でシーディング（初期データ投入）を追加すると、`NativeDatabase.memory()` を使う全テストの初期状態が変わる。件数アサーション（isEmpty, hasLength(N)）、`.first` 参照による取得、名前重複の3種類の修正が必要。修正パターン: (1) hasLength → hasLength(default + N), (2) all.first → all.firstWhere((a) => a.id == id), (3) シードと衝突する名前を変更。
+- **具体例**: `_seedDefaultActivities()` で9件投入 → `drift_activity_repository_test.dart`, `app_database_test.dart`, `tracking_service_impl_test.dart`, `timer_view_model_test.dart`, `timer_page_test.dart` の19テストが影響
+- **スキル化済み**: No
+
 ## Drift storeDateTimeAsText と customSelect の組み合わせ
 - **カテゴリ**: バグ防止
 - **遭遇回数**: 2
