@@ -6,6 +6,7 @@ tmuxの設定ファイルとスクリプトです。
 
 - `.tmux.conf` - tmux設定ファイル
 - `start-tmux.sh` - tmux起動スクリプト（VSCode連携用）
+- `tutorial.md` - 操作チュートリアル（カスタムキーバインド対応 + Wave 開発向け CLI コマンド）
 
 ## 🚀 セットアップ
 
