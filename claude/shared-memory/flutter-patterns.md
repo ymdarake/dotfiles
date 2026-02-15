@@ -128,6 +128,22 @@
 - **具体例**: `_ActivityFilterDropdown` で `DropdownButton<int?>` を使用、value は `selectedActivity?.id`、onChanged で `activeActivities.firstWhere((a) => a.id == activityId)` で逆引き
 - **スキル化済み**: No
 
+## 外部サービス連携の try-catch 握りつぶしパターン
+- **カテゴリ**: エラーハンドリング
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: ビジネスロジック成功後に呼び出す外部サービス（通知、アナリティクス等）は、失敗してもアプリの主要機能に影響させない。try-catch で例外を握りつぶし debugPrint でログ出力する。テストでは Mock に thenThrow を設定して、例外伝播しないことを verify する。
+- **具体例**: `TimerNotifier._notifyStart/Update/Stop` で NotificationService の例外を catch。テスト: `timer_notification_test.dart` の「通知失敗がアプリ動作に影響しない」グループ
+- **スキル化済み**: No
+
+## Platform 分岐の DI パターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: プラットフォーム固有の Infrastructure 実装を DI で切り替える場合、`dart:io` の `Platform.isAndroid` 等を providers.dart 内で判定し、domain interface 型の Provider で返す。テスト時は NoOp 実装がデフォルトで注入されるため、既存テストは変更不要。
+- **具体例**: `notificationServiceProvider` - Android: `ForegroundTaskNotificationService`, その他: `NoopNotificationService`
+- **スキル化済み**: No
+
 ## Drift storeDateTimeAsText と customSelect の組み合わせ
 - **カテゴリ**: バグ防止
 - **遭遇回数**: 2
