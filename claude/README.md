@@ -16,6 +16,12 @@ ln -s $(pwd)/commands/commit-push.md ~/.claude/commands/commit-push.md
 # 権限設定
 ln -s $(pwd)/settings.json.sample ~/.claude/settings.json
 
+# テストランナースクリプト
+mkdir -p ~/.claude/scripts
+ln -s $(pwd)/scripts/flutter-test-runner.sh ~/.claude/scripts/
+ln -s $(pwd)/scripts/maestro-test-runner.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/*.sh
+
 # または setup.sh を使う
 cd /path/to/dotfiles
 ./setup.sh
@@ -253,6 +259,10 @@ Anthropic公式では `CLAUDE.md` という名前も推奨されています。�
 - `project_CLAUDE*.md` - 言語・用途別プロジェクト設定サンプル
 - `ignore_sample.txt` / `global_ignore_sample.txt` - 無視ファイル設定
 - `settings.json.sample` - 権限設定サンプル
+
+### テストランナースクリプト
+- `scripts/flutter-test-runner.sh` - Flutter テスト実行 + サマリー出力（許可プロンプト1回で完結）
+- `scripts/maestro-test-runner.sh` - Maestro E2E テスト実行 + サマリー出力（許可プロンプト1回で完結）
 
 ### カスタムコマンド
 - `commands/commit-push.md` - コミット&プッシュ実行コマンド

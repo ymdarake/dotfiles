@@ -39,18 +39,19 @@ Flutter タイムトラッカーアプリの UI 自動テストを担当する�
 
 #### Maestro テスト正しい実行手順
 
-1. **1つのテストコマンドだけを実行する**: `make maestro-test > /tmp/maestro_output.txt 2>&1`
+1. **テストランナースクリプトを実行する**: `bash ~/.claude/scripts/maestro-test-runner.sh`
 2. **完了を待つ**: 必ずコマンドの終了を待ってから次のアクションに進む
-3. **末尾のサマリーを確認する**: `tail -n 30 /tmp/maestro_output.txt` で Pass/Fail を判定する（これは次のメッセージで行う）
-4. **失敗時は grep で失敗箇所を特定する**: `grep -E 'FAILED|══.*Exception|Expected:' /tmp/maestro_output.txt` 等で失敗箇所を特定する
+3. **出力を確認する**: スクリプトが EXIT_CODE、サマリー（末尾30行）、失敗箇所を自動出力する
+4. **詳細が必要な場合のみ** `/tmp/maestro_output.txt` に対して grep/tail を使う（テストを再実行しない）
 
 #### flutter test 正しい実行手順
 
-1. **1つのテストコマンドだけを実行する**: `flutter test > /tmp/test_output.txt 2>&1`
+1. **テストランナースクリプトを実行する**: `bash ~/.claude/scripts/flutter-test-runner.sh [テスト対象]`
+   - 例: `bash ~/.claude/scripts/flutter-test-runner.sh`（全テスト）
+   - 例: `bash ~/.claude/scripts/flutter-test-runner.sh test/unit/foo_test.dart`（特定テスト）
 2. **完了を待つ**: 必ずコマンドの終了を待ってから次のアクションに進む
-3. **末尾のサマリーを確認する**: `tail -n 20 /tmp/test_output.txt` で Pass/Fail を判定する（これは次のメッセージで行う）
-4. **失敗時は grep で失敗箇所を特定する**: `grep -A 5 -E 'FAILED|══.*Exception|Expected:' /tmp/test_output.txt`
-5. テスト結果の異なる部分を見たい場合は、保存済みの出力ファイルに対して grep/tail を使う（テストを再実行しない）
+3. **出力を確認する**: スクリプトが EXIT_CODE、サマリー（末尾20行）、失敗箇所を自動出力する
+4. **詳細が必要な場合のみ** `/tmp/test_output.txt` に対して grep/tail を使う（テストを再実行しない）
 
 ### ⚠️ 絶対ルール: Gemini は MCP 経由のみ
 
