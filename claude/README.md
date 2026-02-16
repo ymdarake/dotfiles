@@ -5,26 +5,45 @@
 ## TL;DR
 
 ```bash
-# グローバル設定
+cd /path/to/dotfiles/claude
+
+# --- 基本設定 ---
 mkdir -p ~/.claude
-ln -s $(pwd)/global_CLAUDE.md ~/.claude/CLAUDE.md
+ln -sf $(pwd)/global_CLAUDE.md ~/.claude/CLAUDE.md
+ln -sf $(pwd)/settings.json.sample ~/.claude/settings.json
 
-# カスタムコマンド
+# --- カスタムコマンド（スラッシュコマンド） ---
 mkdir -p ~/.claude/commands
-ln -s $(pwd)/commands/commit-push.md ~/.claude/commands/commit-push.md
+ln -sf $(pwd)/commands/commit-push.md ~/.claude/commands/
+ln -sf $(pwd)/commands/review.md ~/.claude/commands/
 
-# 権限設定
-ln -s $(pwd)/settings.json.sample ~/.claude/settings.json
-
-# テストランナースクリプト
+# --- テストランナースクリプト ---
 mkdir -p ~/.claude/scripts
-ln -s $(pwd)/scripts/flutter-test-runner.sh ~/.claude/scripts/
-ln -s $(pwd)/scripts/maestro-test-runner.sh ~/.claude/scripts/
+ln -sf $(pwd)/scripts/flutter-test-runner.sh ~/.claude/scripts/
+ln -sf $(pwd)/scripts/maestro-test-runner.sh ~/.claude/scripts/
 chmod +x ~/.claude/scripts/*.sh
 
-# または setup.sh を使う
-cd /path/to/dotfiles
-./setup.sh
+# --- hooks（Stop hook 等） ---
+mkdir -p ~/.claude/hooks
+ln -sf $(pwd)/hooks/check-diff-size.sh ~/.claude/hooks/
+ln -sf $(pwd)/hooks/wave-guardrail.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/*.sh
+
+# --- スキル ---
+# ディレクトリごとシンボリックリンク（新規スキルも自動反映）
+rm -rf ~/.claude/skills 2>/dev/null
+ln -sf $(pwd)/skills ~/.claude/skills
+
+# --- 共有メモリ ---
+# エージェント間で共有するパターン記録。ディレクトリごとリンク
+rm -rf ~/.claude/shared-memory 2>/dev/null
+ln -sf $(pwd)/shared-memory ~/.claude/shared-memory
+
+# --- エージェント定義（Flutter プロジェクト用） ---
+# グローバルに配置する場合:
+rm -rf ~/.claude/agents 2>/dev/null
+ln -sf $(pwd)/agents ~/.claude/agents
+# プロジェクト固有にする場合は、各プロジェクトの .claude/agents/ にリンク
 ```
 
 ## 初期設定
@@ -210,12 +229,10 @@ description: コマンドの説明
 このdotfilesリポジトリのコマンドを使用する場合：
 
 ```bash
-# commandsディレクトリごとシンボリックリンクを作成
-ln -s $(pwd)/claude/commands ~/.claude/commands
-
-# または個別にリンク
+# 個別にリンク
 mkdir -p ~/.claude/commands
-ln -s $(pwd)/claude/commands/commit-push.md ~/.claude/commands/commit-push.md
+ln -sf $(pwd)/claude/commands/commit-push.md ~/.claude/commands/
+ln -sf $(pwd)/claude/commands/review.md ~/.claude/commands/
 ```
 
 **注意**: 新しいコマンドを追加した場合、Claude Codeセッションの再起動が必要です。
@@ -258,14 +275,44 @@ Anthropic公式では `CLAUDE.md` という名前も推奨されています。�
 - `global_CLAUDE.md` - グローバル設定のテンプレート
 - `project_CLAUDE*.md` - 言語・用途別プロジェクト設定サンプル
 - `ignore_sample.txt` / `global_ignore_sample.txt` - 無視ファイル設定
-- `settings.json.sample` - 権限設定サンプル
+- `settings.json.sample` - 権限設定サンプル（hooks の参照パスも含む）
 
-### テストランナースクリプト
-- `scripts/flutter-test-runner.sh` - Flutter テスト実行 + サマリー出力（許可プロンプト1回で完結）
-- `scripts/maestro-test-runner.sh` - Maestro E2E テスト実行 + サマリー出力（許可プロンプト1回で完結）
+### エージェント定義 (`agents/`)
+- `flutter-developer.md` - TDD サイクルを自律実行する Flutter エンジニア
+- `flutter-layer-first-architect.md` - Layer-first DDD 設計支援
+- `flutter-unit-test.md` - ユニットテスト自動生成
+- `architecture-advisor.md` - アーキテクチャ選定支援
+- `maestro-e2e.md` - Maestro E2E テスト作成・実行
 
-### カスタムコマンド
-- `commands/commit-push.md` - コミット&プッシュ実行コマンド
+### スキル (`skills/`)
+- `flutter-tdd-cycle/` - TDD Red-Green-Refactor オーケストレーション
+- `flutter-po/` - プロダクトオーナースキル
+- `flutter-plan/` - 実装前の DDD 影響分析・計画策定
+- `flutter-wave-orchestrator/` - 複数ストーリー Wave 並列実装
+- `gemini-code-review/` - Gemini によるコードレビュー
+- `flutter-ddd-review/` - DDD アーキテクチャレビュー
+- `flutter-dialog/` - ダイアログ定型パターン生成
+- `flutter-fl-chart-test/` - fl_chart チャート Widget テスト
+- `stale-state-guard/` - キャッシュ陳腐化バグ防止
+- `maestro-qa/` - Maestro E2E テスト実行・レポート
+- `bolt-firebase-tdd/` - Bolt for JS on Firebase の TDD パターン
+- `skill-creator/` - 新規スキル作成ガイド
+
+### Hooks (`hooks/`)
+- `check-diff-size.sh` - Stop hook: 大規模差分検知 → Gemini レビュー促進
+- `wave-guardrail.sh` - Stop hook: Wave ガードレール
+
+### 共有メモリ (`shared-memory/`)
+- `flutter-patterns.md` - Flutter 開発パターン記録（エージェント間で共有）
+- `maestro-patterns.md` - Maestro E2E テストパターン記録
+
+### テストランナースクリプト (`scripts/`)
+- `flutter-test-runner.sh` - Flutter テスト実行 + サマリー出力（許可プロンプト1回で完結）
+- `maestro-test-runner.sh` - Maestro E2E テスト実行 + サマリー出力（許可プロンプト1回で完結）
+
+### カスタムコマンド (`commands/`)
+- `commit-push.md` - コミット&プッシュ実行コマンド
+- `review.md` - コードレビュー実行コマンド
 
 ### ガイド・テンプレート
 - `settings_guide.md` - settings.json の詳しい説明
