@@ -2,23 +2,51 @@
 
 各 Wave で PO が使用するサブエージェント起動プロンプトのテンプレート。
 
-## Wave 0: Architect 起動
+## Wave 0: Architect 起動（共有 interface のみ）
 
 ```
 Task tool → flutter-layer-first-architect:
-"Wave 計画書に基づき、共有 interface の定義とスタブ実装を行ってください。
+"Wave 計画書に基づき、複数ストーリーにまたがる共有 interface の定義とスタブ実装を行ってください。
 
 ## Wave 計画書
 docs/plans/WAVE_{YYYYMMDD}.md（※ {YYYYMMDD} は実際の日付に置換）
 
 ## 実施内容
-計画書の「Wave 0: アーキテクチャ準備」セクションの Tasks を全て実施してください。
+計画書の「Wave 0: 共有アーキテクチャ準備」セクションの Tasks を全て実施してください。
 
 ## 注意事項
-- 各ストーリーの実装箇所に `// TODO(developer): STORY-XXX <説明>` マーカーを配置
+- 共有 interface（2つ以上のストーリーで使われるもの）の定義のみ行うこと
+- ストーリー固有の interface や TODO マーカーは配置しないこと（Wave 1+ の Architect が担当）
 - スタブは `throw UnimplementedError()` で実装
 - 新しいパッケージ依存を追加した場合は `flutter pub get` を実行
 - 既存テストを壊さないこと（`flutter test` で確認）"
+```
+
+## Wave 1+: Architect 起動（ストーリー固有 interface）
+
+各 Wave の冒頭で、PO が Task tool で Architect を起動し、worktree 上にストーリー固有の
+interface + スタブ + TODO マーカーを配置する。master 経由不要（feature ブランチに直接コミット）。
+
+並列 Wave の場合、各 worktree に対して Architect を順次実行してから Developer を一斉起動する。
+
+```
+PO → Task tool → flutter-layer-first-architect:
+"以下のストーリー固有 interface を worktree 上で実装してください。
+
+プロジェクトルート: <worktree-path>
+
+ストーリー: [STORY-XXX] <タイトル>
+受け入れ条件: <Gherkin AC>
+
+Wave 計画書の該当セクション:
+<計画書から Architect Tasks を引用>
+
+## 依頼事項
+1. ストーリー固有の interface（abstract class）を定義
+2. スタブ実装（NotImplementedError）
+3. Developer が実装を開始できるよう TODO マーカーを配置
+4. `dart analyze` がパスすることを確認
+5. 変更を feature ブランチにコミット"
 ```
 
 ## Wave 1+: Developer 並列起動（tmux メッセージングモデル）
@@ -42,7 +70,8 @@ tmux display-message -p '#{session_name}:#{window_index}.#{pane_index}'
 
 ```bash
 tmux new-window -n "story-xxx" -c "../<project>-story-xxx" \
-  "claude --agent flutter-developer \
+  "WAVE_PO_TMUX_TARGET='<po-pane>' WAVE_STORY_ID='STORY-XXX' \
+  claude --agent flutter-developer \
     --permission-mode bypassPermissions \
     'INSTRUCTION.md を読んで指示に従って TDD サイクルで実装してください' \
     2>&1 | tee /tmp/claude-story-xxx.log; \

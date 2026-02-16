@@ -25,17 +25,19 @@ Task tool → flutter-layer-first-architect:
 - 競合するファイルの一覧と競合の性質（追加 vs 変更、同一メソッド vs 別メソッド）
 
 ### 2. 共有 interface の特定
-競合分析を踏まえ、複数ストーリーで必要な共有 interface を特定してください。
+競合分析を踏まえ、**2つ以上のストーリーで使われる共有 interface** を特定してください。
+1つのストーリーでしか使われない interface はストーリー固有として各 Wave の Architect Tasks に分類します。
 - Repository / Service の abstract class
 - Domain Entity / Value Object の拡張
 - Provider の追加・変更
 
 ### 3. Wave 分割
 以下のルールで Wave を分割してください:
-- Wave 0: 共有 interface 定義 + スタブ実装（あなたが実行）
+- Wave 0: **共有 interface のみ**（2つ以上のストーリーで使われるもの）の定義 + スタブ実装（あなたが実行）
 - Wave 1: 競合のないストーリーを並列グループに分類
 - Wave 2+: Wave 1 の結果に依存するストーリー
 - 各 Wave の品質ゲート条件を明記
+- **各 Wave にストーリー固有の Architect Tasks を含める**（Wave 冒頭で Architect が worktree 上で実装）
 
 ### 4. Git Worktree 戦略
 Wave 1+ で使用する git worktree のセットアップ手順を定義してください。
@@ -52,10 +54,10 @@ Wave 間の依存関係と、その理由を明記してください。
 ### 必須セクション
 1. **対象ストーリー** - ID、タイトル、Priority の一覧表
 2. **ファイル競合マトリクス** - ファイル × ストーリーの変更有無 + 競合判定
-3. **共有 Interface** - Wave 0 で定義すべき interface（新規作成 / 既存拡張）
+3. **共有 Interface** - Wave 0 で定義すべき共有 interface（2つ以上のストーリーで使われるもののみ）
 4. **順序制約** - Wave 間の依存関係と理由
 5. **Git Worktree 戦略** - ブランチ命名、worktree ディレクトリ配置、マージ順序
-6. **Wave 0〜N の定義** - 各 Wave の Agent、Tasks、品質ゲート条件"
+6. **Wave 0〜N の定義** - 各 Wave の Agent、Tasks（共有 + ストーリー固有 Architect Tasks）、品質ゲート条件"
 ```
 
 ## コンテキストウィンドウ対策

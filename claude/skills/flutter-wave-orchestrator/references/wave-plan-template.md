@@ -18,7 +18,8 @@
 
 ## 共有 Interface
 
-Wave 0 で定義すべき共有 interface:
+Wave 0 で定義すべき共有 interface（**2つ以上のストーリーで使われるもののみ**）:
+※ 1つのストーリーでしか使われない interface は各 Wave の「Architect Tasks」に記載
 
 ### 新規作成
 - `lib/domain/xxx_repository.dart` - XxxRepository abstract class
@@ -48,16 +49,21 @@ cd ../<project>-story-yyy && flutter pub get
 # マージ順序: STORY-YYY → STORY-ZZZ → STORY-XXX
 ```
 
-## Wave 0: アーキテクチャ準備
+## Wave 0: 共有アーキテクチャ準備
 
 - **Agent**: flutter-layer-first-architect
 - **Tasks**:
   - [ ] 共有 interface 定義（上記「共有 Interface」セクション参照）
-  - [ ] 各ストーリー向け TODO マーカー配置
   - [ ] スタブ実装（NotImplementedError）
 - **Gate**: `dart analyze` + `flutter test` パス + master コミット
 
 ## Wave 1: 並列実装
+
+- **Architect Tasks**（Step 1.5 で worktree 上に実装）:
+  - STORY-XXX 固有:
+    - [ ] <ストーリー固有 interface / スタブ / TODO マーカー>
+  - STORY-YYY 固有:
+    - [ ] <ストーリー固有 interface / スタブ / TODO マーカー>
 
 - **Stream A**: STORY-XXX
   - Agent: flutter-developer
@@ -74,6 +80,9 @@ cd ../<project>-story-yyy && flutter pub get
 ## Wave 2: 依存実装
 
 - **前提**: Wave 1 の STORY-YYY 完了 + master マージ済み
+- **Architect Tasks**（Step 1.5 で worktree 上に実装）:
+  - STORY-ZZZ 固有:
+    - [ ] <ストーリー固有 interface / スタブ / TODO マーカー>
 - **Tasks**: STORY-ZZZ（STORY-YYY の拡張部分を含む）
   - Agent: flutter-developer
   - Worktree: `../<project>-story-zzz`（master から新規作成）

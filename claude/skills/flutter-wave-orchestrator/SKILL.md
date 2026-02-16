@@ -38,8 +38,9 @@ Phase 2: Wave 計画策定（flutter-layer-first-architect）
   → docs/plans/WAVE_{YYYYMMDD}.md に出力
 
 Phase 3: Wave 実行（PO がオーケストレーション）
-  → Wave 0: flutter-layer-first-architect が interface 定義 + スタブ実装
-  → Wave 1+: tmux で worktree ごとに Claude --agent flutter-developer を起動（メッセージングモデル）
+  → Wave 0: flutter-layer-first-architect が「複数ストーリーにまたがる共有 interface」のみ実装
+  → Wave 1+: 各 Wave 冒頭で Architect がストーリー固有 interface を worktree 上に実装
+              → Developer が TDD 実装（並列時: tmux + worktree、直列時: Task tool）
   → Wave N-1: 統合レビュー
   → Wave N: maestro-e2e
 ```
@@ -103,7 +104,7 @@ PO が各出力を `docs/plans/STORY-XXX.md` に Write で保存する。
 PO は以下を確認してから Phase 3 に進む:
 - [ ] 全対象ストーリーが Wave に割り当てられているか
 - [ ] 順序制約の理由が明確か
-- [ ] Wave 0 の共有 interface が全ストーリーの AC をカバーしているか
+- [ ] Wave 0 の共有 interface + 各 Wave の固有 interface が全ストーリーの AC をカバーしているか
 - [ ] Git worktree 戦略が定義されているか
 
 ---
@@ -113,15 +114,33 @@ PO は以下を確認してから Phase 3 に進む:
 計画書に従い、PO が各 Wave を順次実行する。
 各 Wave のサブエージェント起動プロンプトは [wave-prompts-template.md](references/wave-prompts-template.md) を参照。
 
-### Wave 0: アーキテクチャ準備
+### 並列実行の判断基準
 
-`flutter-layer-first-architect` が自身の計画に基づき interface 定義 + スタブ実装を行う。
+**tmux を使うのは、同一 Wave 内で2つ以上のストーリーを並列実行する場合のみ。**
+
+並列実行しないケース（以下のいずれか）では、tmux・worktree・bypassPermissions を使わず、
+通常の Task tool サブエージェント（`flutter-developer`）でメインリポジトリ上で直接実装する:
+
+- Wave 内のストーリーが1つだけ
+- ストーリー間に順序依存があり、結果的に直列実行になる
+- 計画書で並列不要と判断されている
+
+**理由:** tmux + `bypassPermissions` はガードレール（`wave-guardrail.sh`）で保護されるが、
+並列の必要がなければそのリスクを取る理由がない。通常の permission-mode で対話的に実行する方が安全。
+
+### Wave 0: 共有アーキテクチャ準備
+
+`flutter-layer-first-architect` が **2つ以上のストーリーで使われる共有 interface** のみを master に実装する。
+ストーリー固有の interface は Wave 1+ で各 worktree に直接実装するため、ここでは対象外。
+
+**共有 interface の定義基準:**
+- 2つ以上のストーリーの AC 実現に必要な Repository / Service / Entity
+- 計画書の「共有 Interface」セクションに記載されたもの
 
 **品質ゲート（Wave 0 → Wave 1 の条件）:**
 - [ ] `dart analyze` パス
 - [ ] `flutter test` パス（既存テストの回帰なし）
-- [ ] 共有 interface が定義済み
-- [ ] 各ストーリー向けの TODO マーカーが配置済み
+- [ ] 共有 interface が定義済み + スタブ実装（NotImplementedError）
 - [ ] master にコミット済み
 
 ### Wave 1+: 並列実装（tmux メッセージングモデル）
@@ -138,10 +157,43 @@ Task tool のサブエージェントは cwd がメインプロジェクトに�
 # PO: worktree セットアップ（Wave 0 完了後、メインリポジトリで実行）
 git worktree add ../<project>-story-xxx -b feature/story-xxx
 cp -r .claude ../<project>-story-xxx/
+# ガードレール用 settings.json を上書き
+cp .claude/skills/flutter-wave-orchestrator/references/worktree-settings.json \
+  ../<project>-story-xxx/.claude/settings.json
+# wave-guardrail.sh は cp -r .claude で既にコピー済み
 (cd ../<project>-story-xxx && flutter pub get)
 # ※ サブシェルで実行するためカレントディレクトリは変わらない
 # ※ .claude/ を必ずコピーする（worktree には自動コピーされない）
 # ※ クリーンアップはここではやらない。Wave N-1 のマージ完了後に行う
+```
+
+#### Step 1.5: Architect によるストーリー固有 interface 定義
+
+PO が Task tool で `flutter-layer-first-architect` を起動し、worktree 上でストーリー固有の
+interface + スタブ + TODO マーカーを配置する。**master 経由不要**（feature ブランチに直接コミット）。
+
+- **実行方法**: Task tool サブエージェント（tmux 不使用、bypassPermissions 不要）
+- **実行場所**: 各 worktree ディレクトリ
+- **並列 Wave の場合**: 各 worktree に対して Architect を順次実行してから、Developer を一斉起動する
+
+```
+PO → Task tool → flutter-layer-first-architect:
+"以下のストーリー固有 interface を worktree 上で実装してください。
+
+プロジェクトルート: <worktree-path>
+
+ストーリー: [STORY-XXX] <タイトル>
+受け入れ条件: <Gherkin AC>
+
+Wave 計画書の該当セクション:
+<計画書から Architect Tasks を引用>
+
+## 依頼事項
+1. ストーリー固有の interface（abstract class）を定義
+2. スタブ実装（NotImplementedError）
+3. Developer が実装を開始できるよう TODO マーカーを配置
+4. `dart analyze` がパスすることを確認
+5. 変更を feature ブランチにコミット"
 ```
 
 #### Step 2: INSTRUCTION.md の配置
@@ -161,12 +213,18 @@ PO が tmux で新ウィンドウを作成し、Claude CLI を起動する。
 
 ```bash
 tmux new-window -n "story-xxx" -c "../<project>-story-xxx" \
-  "claude --agent flutter-developer \
+  "WAVE_PO_TMUX_TARGET='<po-pane>' WAVE_STORY_ID='STORY-XXX' \
+  claude --agent flutter-developer \
     --permission-mode bypassPermissions \
     'INSTRUCTION.md を読んで指示に従って TDD サイクルで実装してください' \
     2>&1 | tee /tmp/claude-story-xxx.log; \
   touch /tmp/claude-story-xxx-exited"
 ```
+
+| 環境変数 | 値 | 用途 |
+|---------|-----|------|
+| `WAVE_PO_TMUX_TARGET` | PO の tmux pane ID | ガードレールのエスカレーション通知先 |
+| `WAVE_STORY_ID` | ストーリー ID | エスカレーションファイルの識別子 |
 
 | オプション | 値 | 理由 |
 |-----------|-----|------|
@@ -247,14 +305,82 @@ UI 変更を伴う場合、maestro-e2e エージェントで E2E テストを実
 
 ---
 
+## ガードレール（bypassPermissions 安全装置）
+
+`--permission-mode bypassPermissions` で起動される Developer エージェントに対する安全装置。
+PreToolUse hook（`wave-guardrail.sh`）が Bash/Write/Edit の呼び出し時に自動判定する。
+
+### 2層構造
+
+```
+Developer が Bash/Write/Edit を呼び出す
+  │
+  ├─ PreToolUse hook (wave-guardrail.sh) が起動
+  │
+  ├─ Layer 1: HARD DENY（即座にブロック）
+  │   └─ 絶対に許可しない操作 → 即 deny
+  │
+  ├─ Layer 2: PO エスカレーション（tmux 経由で承認待ち）
+  │   └─ 文脈次第で正当な操作 → PO に判断を委ねる
+  │
+  └─ Layer 3: AUTO ALLOW
+      └─ 通常の開発コマンド → 許可
+```
+
+### Layer 1: HARD DENY
+
+| カテゴリ | パターン | 理由 |
+|---------|---------|------|
+| git push | `git push`（全種類） | push は PO の責務 |
+| 破壊的 git | `git reset --hard`, `git clean -f`, `git checkout .`, `git branch -D` | worktree 状態の破壊 |
+| システム破壊 | `sudo`, `chmod 777`, `eval` | セキュリティリスク |
+| リモートスクリプト実行 | `curl\|bash`, `curl\|sh`, `wget\|python` 等 | リモートコード実行 |
+| ワークスペース外書き出し | `curl -o /etc/...`, `wget -O /tmp/...`, `> /usr/...` | ファイルシステム汚染 |
+| ルート削除 | `rm -rf /`, `rm -rf /*` | 致命的 |
+| 自己改変 | `.claude/` 配下への Write/Edit | ガードレール自体の無効化を防止 |
+
+### Layer 2: PO エスカレーション
+
+| カテゴリ | パターン | 正当なケースの例 |
+|---------|---------|----------------|
+| 外部通信 | `curl`, `wget`, `ssh`, `scp`, `sftp`, `rsync`, `nc`, `telnet`, `ftp` | API 確認等（基本的に TDD 実装中は不要） |
+| スクリプト実行 | `bash <file>`, `bash -c "..."`, `sh <file>`, `python <file>`, `./<file>`, `source <file>` | テストヘルパースクリプト等 |
+| ディレクトリ削除 | `rm -r` / `rm -rf`（ルート以外） | build/ や .dart_tool/ のクリーン |
+| git worktree | `git worktree` 操作 | PO から指示された場合 |
+| worktree 外ファイル | 絶対パスが worktree 外を指す Write/Edit | 共有設定の更新（稀） |
+
+**エスカレーションフロー:**
+1. `/tmp/wave-escalation-{story}-{hash}.json` にリクエスト詳細を書き出し
+2. `tmux send-keys` で PO に承認リクエストを送信
+3. `/tmp/wave-response-{story}-{hash}` をポーリング（2秒間隔、120秒 timeout）
+4. `approve` → 許可 / `deny` → 拒否 / timeout → 拒否（フェイルセーフ）
+
+**環境変数（tmux 起動時に設定）:**
+- `WAVE_PO_TMUX_TARGET`: PO の tmux pane ID（必須）
+- `WAVE_STORY_ID`: ストーリー ID
+- `WAVE_ESCALATION_TIMEOUT`: タイムアウト秒数（デフォルト: 120）
+
+**実装ファイル:**
+- hook 本体: `claude/hooks/wave-guardrail.sh`
+- worktree 用 settings: `claude/skills/flutter-wave-orchestrator/references/worktree-settings.json`
+
+---
+
 ## エラーハンドリング
 
 ### `flutter-developer` が設計不備を検知した場合
 
-Wave 1+ の実装中に「共有 interface が不足」と判明した場合:
+Wave 1+ の実装中に「interface が不足」と判明した場合:
 
+**A. ストーリー固有の interface が不足している場合:**
 1. `flutter-developer` が不足内容を報告して停止
-2. PO が `flutter-layer-first-architect` を再起動し、interface 追加を依頼
+2. PO が `flutter-layer-first-architect` を **該当 worktree 上で** Task tool で再起動
+3. Architect が不足 interface を worktree に追加（feature ブランチに直接コミット）
+4. `flutter-developer` を再開
+
+**B. 複数ストーリーにまたがる共有 interface が不足している場合:**
+1. `flutter-developer` が不足内容を報告して停止
+2. PO が `flutter-layer-first-architect` を **master 上で** 再起動し、共有 interface を追加
 3. `flutter-layer-first-architect` が修正を master にコミット
 4. 各 worktree で `git rebase master` 後、`flutter-developer` を再開
 
@@ -289,3 +415,4 @@ Wave 1+ の実装中に「共有 interface が不足」と判明した場合:
 - **[wave-prompts-template.md](references/wave-prompts-template.md)**: 各 Wave のサブエージェント起動プロンプト集
 - **[instruction-template.md](references/instruction-template.md)**: Developer への INSTRUCTION.md フォーマット
 - **[report-template.md](references/report-template.md)**: Developer の report.md フォーマット
+- **[worktree-settings.json](references/worktree-settings.json)**: worktree 用 `.claude/settings.json` テンプレート（ガードレール hook 登録済み）
