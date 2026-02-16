@@ -128,6 +128,16 @@ PO は以下を確認してから Phase 3 に進む:
 **理由:** tmux + `bypassPermissions` はガードレール（`wave-guardrail.sh`）で保護されるが、
 並列の必要がなければそのリスクを取る理由がない。通常の permission-mode で対話的に実行する方が安全。
 
+### ⚠️ 絶対ルール: worktree の直接編集禁止
+
+**PO（オーケストレーター）やそのサブエージェント（Task tool 経由）から、worktree 内のファイルを直接編集してはならない。**
+
+worktree はプロジェクト外ディレクトリ（`../<project>-story-xxx/`）のため、Task tool サブエージェントの
+パーミッションパターンが効かず、すべてのファイル操作で許可プロンプトが発生する。
+
+worktree でのファイル操作は、**必ず tmux で独立した Claude プロセスを起動し、worktree を cwd にすること。**
+これは Architect（Step 1.5）にも Developer（Step 3）にも適用される。
+
 ### Wave 0: 共有アーキテクチャ準備
 
 `flutter-layer-first-architect` が **2つ以上のストーリーで使われる共有 interface** のみを master に実装する。
@@ -169,18 +179,22 @@ cp .claude/skills/flutter-wave-orchestrator/references/worktree-settings.json \
 
 #### Step 1.5: Architect によるストーリー固有 interface 定義
 
-PO が Task tool で `flutter-layer-first-architect` を起動し、worktree 上でストーリー固有の
+PO が tmux で `flutter-layer-first-architect` を起動し、worktree 上でストーリー固有の
 interface + スタブ + TODO マーカーを配置する。**master 経由不要**（feature ブランチに直接コミット）。
 
-- **実行方法**: Task tool サブエージェント（tmux 不使用、bypassPermissions 不要）
+- **実行方法**: tmux + bypassPermissions（worktree は外部ディレクトリのため Task tool では許可プロンプトが全操作で発生する）
 - **実行場所**: 各 worktree ディレクトリ
-- **並列 Wave の場合**: 各 worktree に対して Architect を順次実行してから、Developer を一斉起動する
+- **並列 Wave の場合**: 各 worktree に対して Architect を並列起動し、全完了後に Developer を一斉起動する
 
-```
-PO → Task tool → flutter-layer-first-architect:
-"以下のストーリー固有 interface を worktree 上で実装してください。
+**⚠️ Task tool で worktree を直接編集してはならない。** worktree はプロジェクト外ディレクトリのため、
+すべてのファイル操作で許可プロンプトが発生する。必ず tmux でプロセスを分離すること。
 
-プロジェクトルート: <worktree-path>
+```bash
+# PO: Architect を worktree 上で起動
+tmux new-window -n "arch-story-xxx" -c "../<project>-story-xxx" \
+  "claude --agent flutter-layer-first-architect \
+    --permission-mode bypassPermissions \
+    -p '以下のストーリー固有 interface を実装してください。
 
 ストーリー: [STORY-XXX] <タイトル>
 受け入れ条件: <Gherkin AC>
@@ -192,8 +206,18 @@ Wave 計画書の該当セクション:
 1. ストーリー固有の interface（abstract class）を定義
 2. スタブ実装（NotImplementedError）
 3. Developer が実装を開始できるよう TODO マーカーを配置
-4. `dart analyze` がパスすることを確認
-5. 変更を feature ブランチにコミット"
+4. dart analyze がパスすることを確認
+5. 変更を feature ブランチにコミット' \
+    2>&1 | tee /tmp/claude-arch-story-xxx.log; \
+  echo \$? > /tmp/claude-arch-story-xxx.exit_code"
+```
+
+**完了検知**: PO は `/tmp/claude-arch-story-xxx.exit_code` の出現を監視する。
+`-p` ワンショットモードのため、Architect は処理完了後に自動終了する。
+
+```bash
+# PO: Architect 完了を待機（ポーリング）
+while [ ! -f /tmp/claude-arch-story-xxx.exit_code ]; do sleep 5; done
 ```
 
 #### Step 2: INSTRUCTION.md の配置
