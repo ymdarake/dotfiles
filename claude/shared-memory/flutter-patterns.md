@@ -18,10 +18,10 @@
 
 ## 未来日付バリデーションの二重防御
 - **カテゴリ**: バグ防止
-- **遭遇回数**: 1
+- **遭遇回数**: 2
 - **発見元**: time-tracker
-- **概要**: UI 側で DatePicker の lastDate 制限 + Service 層で FutureDateError バリデーション。UI をバイパスする経路に備えた防御的プログラミング。
-- **具体例**: `LogServiceImpl.moveEntryToDate` の未来日チェック + `_EntryEditDialog._pickDate` の lastDate: today
+- **概要**: UI 側で DatePicker の lastDate 制限 + Service 層で FutureDateError / FutureStartTimeError バリデーション。UI をバイパスする経路に備えた防御的プログラミング。
+- **具体例**: (1) `LogServiceImpl.moveEntryToDate` の未来日チェック + `_EntryEditDialog._pickDate` の lastDate: today; (2) `LogServiceImpl.updateRunningEntryStartTime` の FutureStartTimeError + TimePicker は過去時刻のみ選択可能な想定
 - **スキル化済み**: No
 
 ## invalidateSelf vs 直接 state 更新の判断
@@ -34,7 +34,7 @@
 
 ## Widget テストで画面外ボタンがタップできない問題
 - **カテゴリ**: テスト
-- **遭遇回数**: 1
+- **遭遇回数**: 2
 - **発見元**: time-tracker
 - **概要**: UI にコンテンツ（円グラフ等）を追加すると、既存の Widget テストで画面下部のボタンが画面外に押し出されタップ失敗する。`scrollUntilVisible` は複数 Scrollable があると `Too many elements` エラーになる。`tester.view.physicalSize` で画面サイズを拡大する方が安定。
 - **具体例**: `log_page_test.dart` の PDF/CSV ボタンテスト - 円グラフ追加で Offset(626.6, 752.0) が画面外 (800x600) に。`tester.view.physicalSize = Size(800, 1600)` + `devicePixelRatio = 1.0` で解決。`addTearDown` で `resetPhysicalSize` / `resetDevicePixelRatio` 必須。
@@ -50,10 +50,10 @@
 
 ## FutureProvider.autoDispose + ViewModel 経由の目標達成度パターン
 - **カテゴリ**: 設計
-- **遭遇回数**: 1
+- **遭遇回数**: 2
 - **発見元**: time-tracker
-- **概要**: Service 不要のケースでは FutureProvider.autoDispose で Repository 単一メソッド + 純粋関数計算（CalculationService）を組み合わせる。稼働中のセッションエントリ（endedAt == null）も考慮するため、timerState.entries との重複排除が必要。
-- **具体例**: `dailyGoalProgressProvider` - LogRepository.getEntriesForDate + CalculationService.calculateWorkDuration + timerState.entries の重複排除
+- **概要**: Service 不要のケースでは FutureProvider.autoDispose で Repository 単一メソッド + 純粋関数計算（CalculationService）を組み合わせる。稼働中のセッションエントリ（endedAt == null）も考慮するため、timerState.entries との重複排除が必要。アーカイブ済みエンティティの名前解決にも使える（getAllActivities を参照）。
+- **具体例**: `dailyGoalProgressProvider` - LogRepository.getEntriesForDate + CalculationService.calculateWorkDuration + timerState.entries の重複排除; `allActivitiesProvider` - ActivityRepository.getAllActivities で全アクティビティ取得（アーカイブ含む）
 - **スキル化済み**: No
 
 ## CustomPaint の find.byType テストでの多重マッチ問題
@@ -130,10 +130,10 @@
 
 ## 外部サービス連携の try-catch 握りつぶしパターン
 - **カテゴリ**: エラーハンドリング
-- **遭遇回数**: 1
+- **遭遇回数**: 3
 - **発見元**: time-tracker
-- **概要**: ビジネスロジック成功後に呼び出す外部サービス（通知、アナリティクス等）は、失敗してもアプリの主要機能に影響させない。try-catch で例外を握りつぶし debugPrint でログ出力する。テストでは Mock に thenThrow を設定して、例外伝播しないことを verify する。
-- **具体例**: `TimerNotifier._notifyStart/Update/Stop` で NotificationService の例外を catch。テスト: `timer_notification_test.dart` の「通知失敗がアプリ動作に影響しない」グループ
+- **概要**: ビジネスロジック成功後に呼び出す外部サービス（通知、アナリティクス等）は、失敗してもアプリの主要機能に影響させない。try-catch で例外を握りつぶし debugPrint でログ出力する。テストでは Mock に thenThrow を設定して、例外伝播しないことを verify する。権限リクエスト等の前処理も同じ try-catch ブロック内に置くことで、権限拒否時も握りつぶされる。
+- **具体例**: `TimerNotifier._notifyStart/Update/Stop` で NotificationService の例外を catch。テスト: `timer_notification_test.dart` の「通知失敗がアプリ動作に影響しない」グループ。STORY-020: `requestNotificationPermission` を `_notifyStart` の try-catch 内に追加。
 - **スキル化済み**: No
 
 ## Platform 分岐の DI パターン
@@ -151,3 +151,43 @@
 - **概要**: `storeDateTimeAsText: true` の場合、customSelect で日時比較するとき ISO 8601 文字列で比較し、秒差計算には `strftime('%s', col)` を使う。また、`row.read<String>('date_column')` で取得した文字列を `DateTime.parse()` するとUTCとして解析される場合があるため、`.toLocal()` + `DateTime(y,m,d)` で論理日付に変換する必要がある。
 - **具体例**: `DriftMonthlyReportRepository.getActivityBreakdown` - Variable.withString, strftime 使用; `getWeeklyBreakdown` - DateTime.parse(dateStr).toLocal() で UTC→ローカル変換
 - **スキル化済み**: Yes
+
+## Widget テストで find.text が複数 Widget にマッチする問題
+- **カテゴリ**: テスト
+- **遭遇回数**: 3
+- **発見元**: time-tracker
+- **概要**: `find.text('X')` が対象 Widget 以外の別 Widget（DurationSummaryRow の「稼働」/「休憩」ラベル等）にもマッチして `findsOneWidget` が失敗する。`find.descendant(of: find.byType(TargetWidget), matching: find.text('X'))` でスコープを限定する。CustomPaint の多重マッチと同じ原理。
+- **具体例**: `timer_page_test.dart` - EntryTile の「稼働」テキストが DurationSummaryRow にも存在; `day_detail_page_test.dart` - 「休憩」テキストが DurationSummaryRow と EntryTile の両方に存在。find.descendant(of: find.byType(EntryTimeline)) でスコープ限定して解決。
+- **スキル化済み**: No
+
+## Service 層での入力 ID 存在チェック
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: Service 層でリスト内の対象 ID を検索する際、ID が見つからないケースのガードを忘れがち。`for` ループで `found` フラグを管理し、未発見時は `EntryNotFoundError` 等のドメインエラーを返す。Gemini レビューで検出されやすい。
+- **具体例**: `LogServiceImpl.updateRunningEntryStartTime` - entries リストから entryId を探す際、`bool found = false` + `if (!found) return Result.failure(const EntryNotFoundError())`
+- **スキル化済み**: No
+
+## UI エラーメッセージの重複排除
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: 同じドメインエラーを処理する Page が複数ある場合（timer_page, day_detail_page 等）、`switch (error)` によるエラーメッセージ生成ロジックが重複する。LogError の拡張メソッドや共通ヘルパーとして切り出すことで DRY にできる。Gemini レビューで Low 指摘される。
+- **具体例**: `timer_page.dart` と `day_detail_page.dart` の `StartTimeEditResult` 処理で `FutureStartTimeError` / `OverlappingEntryError` のメッセージ分岐が重複
+- **スキル化済み**: No
+
+## Interface メソッド追加時の Mock スタブ漏れ
+- **カテゴリ**: テスト
+- **遭遇回数**: 2
+- **発見元**: time-tracker
+- **概要**: domain interface にメソッドを追加した場合、mocktail の Mock クラスは未スタブのメソッドに対して null を返す。`Future<bool>` を返すメソッドでスタブが未設定だと `type 'Null' is not a subtype of type 'Future<bool>'` エラーになる。テストの setUp で全 Mock メソッドにデフォルトスタブを設定しておくことが重要。新たに `Duration` 型を使うメソッドを追加する場合は `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` も必要。
+- **具体例**: (1) STORY-020 `NotificationService.requestNotificationPermission()` 追加時、既存テスト6件が失敗。setUp にスタブ追加で解決。(2) STORY-033 `sendTimerData()` 追加時、`registerFallbackValue` 未設定で7テスト失敗。`setUpAll` に `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` 追加で解決。
+- **スキル化済み**: No
+
+## TaskHandler Isolate へのデータ送信時の二重計算防止
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: Main isolate から TaskHandler（別 isolate）にタイマーデータを送信する際、「累積時間」として total（完了済み + 進行中）を渡すと、TaskHandler 側で進行中分を再度加算して二重計算になる。累積時間は「完了済みエントリのみの合計」を渡し、TaskHandler 側で `累積 + (now - currentEntryStartedAt)` として合算するのが正しい。
+- **具体例**: STORY-033 `_notifyStart`/`_notifyUpdate` で `CalculationService.calculateWorkDuration(entries, now: now)` (total) ではなく `calculateWorkDuration(entries)` (completedのみ) を `sendTimerData.accumulatedWorkDuration` に渡す。Gemini レビューで Critical 指摘として検出。
+- **スキル化済み**: No

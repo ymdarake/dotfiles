@@ -32,6 +32,30 @@
 - **具体例**: (1) `WeeklyStackedBarChart` の前週/次週ボタン — `Semantics(identifier:)` → `tooltip` + `tapOn` に変更。(2) 設定画面の `PopupMenuButton` — デフォルト tooltip "Show menu" を `'${activity.name} menu'` に変更し、9件のアクティビティを個別にアーカイブ可能に。
 - **スキル化済み**: No
 
+## UI テキスト変更に伴う assertVisible の一括修正漏れ
+- **カテゴリ**: Flow設計
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: AppBar タイトルやラベルなどの静的テキストを変更した際、`assertVisible: "旧テキスト"` で画面遷移を確認しているフローが複数箇所で壊れる。テキストベースのアサーションは変更に脆い。Semantics identifier ベースのアサーションを優先すべき。
+- **具体例**: STORY-017 でログ画面の AppBar タイトル「ログ」をドロップダウン（デフォルト「すべて」）に変更。6フロー9箇所の `assertVisible: "ログ"` が失敗。`grep` で全フローを横断検索して一括修正。
+- **スキル化済み**: No
+
+## 停止中は _resolveActivityName が null を返すためテスト状態に注意
+- **カテゴリ**: Flow設計
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: `_resolveActivityName(timerState)` は `status == TimerStatus.stopped` のとき `null` を返す。停止後のエントリ一覧では EntryTile の title が「稼働」にフォールバックする。アクティビティ名表示のテストは稼働中または休憩中に行う必要がある。
+- **具体例**: STORY-022 のアクティビティ名表示テスト。休憩中 (currentActivityId が維持されている状態) でエントリの title に "E2ETest" が表示されることを確認。停止後にテストすると「稼働」になり失敗する。
+- **スキル化済み**: No
+
+## スワイプ操作は座標ベースのパーセンテージ指定が安定
+- **カテゴリ**: Flow設計
+- **遭遇回数**: 1
+- **発見元**: time-tracker
+- **概要**: Maestro の `swipe` コマンドでリスト行をスワイプする場合、Semantics identifier がない要素にはパーセンテージ座標指定 (`start: 80%, 85%` / `end: 20%, 85%`) が安定。`from` + `direction` 指定よりも確実。既存のフロー (notification_action_buttons) でも同様の手法を使用。
+- **具体例**: STORY-024 のスワイプ削除テスト。EntryTile の ListTile に identifier がないため、画面下部 (85%) の位置で左スワイプを実行して Dismissible の確認ダイアログを発火。
+- **スキル化済み**: No
+
 ## FAB とリスト末尾アイテムの重なり問題
 - **カテゴリ**: スクロール
 - **遭遇回数**: 1
