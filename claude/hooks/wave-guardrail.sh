@@ -42,9 +42,34 @@ elif [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 fi
 
+# 文字列をサニタイズするヘルパー（Terminal Injection 防止）
+sanitize() {
+  echo "$1" | tr -cd '[:alnum:].: _\-()[]/<>*'
+}
+
+# PO に通知を送るヘルパー（HARD DENY 用。承認不要だが気づけるようにする）
+notify_po() {
+  local reason
+  reason=$(sanitize "$1")
+  local PO_TARGET="${WAVE_PO_TMUX_TARGET:-}"
+  local STORY_ID="${WAVE_STORY_ID:-UNKNOWN}"
+  if [ -n "$PO_TARGET" ]; then
+    tmux send-keys -t "$PO_TARGET" C-c 2>/dev/null
+    sleep 0.2
+    tmux send-keys -t "$PO_TARGET" -l \
+      "[${STORY_ID}] BLOCKED: ${reason}" 2>/dev/null
+    tmux send-keys -t "$PO_TARGET" Enter 2>/dev/null
+  fi
+}
+
 # deny を出力して終了するヘルパー
+# hard_deny=true の場合は PO にも通知する
 deny() {
   local reason="$1"
+  local hard_deny="${2:-false}"
+  if [ "$hard_deny" = true ]; then
+    notify_po "$reason"
+  fi
   cat <<EOF
 {"decision": "deny", "reason": "$reason"}
 EOF
@@ -58,49 +83,49 @@ EOF
 if [ "$TOOL_NAME" = "Bash" ] && [ -n "$COMMAND" ]; then
   # --- git push（全種類） ---
   if echo "$COMMAND" | grep -qE 'git\s+push'; then
-    deny "HARD DENY: git push は PO の責務です"
+    deny "HARD DENY: git push は PO の責務です" true
   fi
 
   # --- 破壊的 git 操作 ---
   if echo "$COMMAND" | grep -qE 'git\s+reset\s+--hard'; then
-    deny "HARD DENY: git reset --hard は worktree 状態を破壊します"
+    deny "HARD DENY: git reset --hard は worktree 状態を破壊します" true
   fi
   if echo "$COMMAND" | grep -qE 'git\s+clean\s+-[a-zA-Z]*f'; then
-    deny "HARD DENY: git clean -f は worktree 状態を破壊します"
+    deny "HARD DENY: git clean -f は worktree 状態を破壊します" true
   fi
   if echo "$COMMAND" | grep -qE 'git\s+checkout\s+\.'; then
-    deny "HARD DENY: git checkout . は worktree 状態を破壊します"
+    deny "HARD DENY: git checkout . は worktree 状態を破壊します" true
   fi
   if echo "$COMMAND" | grep -qE 'git\s+restore\s+\.'; then
-    deny "HARD DENY: git restore . は worktree 状態を破壊します"
+    deny "HARD DENY: git restore . は worktree 状態を破壊します" true
   fi
   if echo "$COMMAND" | grep -qE 'git\s+branch\s+-D'; then
-    deny "HARD DENY: git branch -D はブランチを強制削除します"
+    deny "HARD DENY: git branch -D はブランチを強制削除します" true
   fi
 
   # --- システム破壊 ---
   if echo "$COMMAND" | grep -qE 'sudo\s'; then
-    deny "HARD DENY: sudo は許可されていません"
+    deny "HARD DENY: sudo は許可されていません" true
   fi
   if echo "$COMMAND" | grep -qE 'chmod\s+777'; then
-    deny "HARD DENY: chmod 777 は許可されていません"
+    deny "HARD DENY: chmod 777 は許可されていません" true
   fi
   if echo "$COMMAND" | grep -qE 'curl\s.*\|\s*(bash|sh|zsh|python3?|ruby|perl|node)'; then
-    deny "HARD DENY: curl でリモートスクリプトをパイプ実行することは許可されていません"
+    deny "HARD DENY: curl でリモートスクリプトをパイプ実行することは許可されていません" true
   fi
   if echo "$COMMAND" | grep -qE 'wget\s.*\|\s*(bash|sh|zsh|python3?|ruby|perl|node)'; then
-    deny "HARD DENY: wget でリモートスクリプトをパイプ実行することは許可されていません"
+    deny "HARD DENY: wget でリモートスクリプトをパイプ実行することは許可されていません" true
   fi
   if echo "$COMMAND" | grep -qE 'eval\s'; then
-    deny "HARD DENY: eval は許可されていません"
+    deny "HARD DENY: eval は許可されていません" true
   fi
 
   # --- ルート削除 ---
   if echo "$COMMAND" | grep -qE 'rm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\s+/\s*$'; then
-    deny "HARD DENY: rm -rf / は許可されていません"
+    deny "HARD DENY: rm -rf / は許可されていません" true
   fi
   if echo "$COMMAND" | grep -qE 'rm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\s+/\*'; then
-    deny "HARD DENY: rm -rf /* は許可されていません"
+    deny "HARD DENY: rm -rf /* は許可されていません" true
   fi
 
   # --- curl/wget によるワークスペース外へのファイル書き出し ---
@@ -123,7 +148,7 @@ if [ "$TOOL_NAME" = "Bash" ] && [ -n "$COMMAND" ]; then
       esac
       case "$abs_path" in
         "$CWD"/*) ;;
-        *) deny "HARD DENY: ワークスペース外へのファイル書き出しは許可されていません ($abs_path)" ;;
+        *) deny "HARD DENY: ワークスペース外へのファイル書き出しは許可されていません ($abs_path)" true ;;
       esac
     fi
   fi
@@ -132,7 +157,7 @@ fi
 # --- .claude/ 配下への Write/Edit（自己改変防止） ---
 if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   if [ -n "$FILE_PATH" ] && echo "$FILE_PATH" | grep -qE '(^|/)\.claude/'; then
-    deny "HARD DENY: .claude/ 配下の変更は許可されていません（ガードレール保護）"
+    deny "HARD DENY: .claude/ 配下の変更は許可されていません（ガードレール保護）" true
   fi
 fi
 
@@ -245,8 +270,8 @@ REQEOF
 
   # PO に tmux 経由で通知
   DISPLAY_CMD="$COMMAND$FILE_PATH"
-  # 改行をスペースに置換（コマンドインジェクション防止）
-  DISPLAY_CMD=$(echo "$DISPLAY_CMD" | tr '\n' ' ')
+  # サニタイズ（Terminal Injection 防止）
+  DISPLAY_CMD=$(sanitize "$DISPLAY_CMD")
   # 長すぎるコマンドは省略
   if [ ${#DISPLAY_CMD} -gt 80 ]; then
     DISPLAY_CMD="${DISPLAY_CMD:0:77}..."
