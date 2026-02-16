@@ -398,6 +398,24 @@ class AuthServiceImpl implements AuthService {
 コード作成後、`flutter analyze` を実行してエラーがないことを確認する。
 Developer が「テスト以前にビルドできない」状態を防ぐ。
 
+### テスト実行ルール
+
+テストを実行する場合は、**必ずテストランナースクリプトを使用する**。
+パイプ（`|`）やリダイレクト（`>`）を含むコマンドを直接組み立ててはならない。
+
+```bash
+# ✅ 正しい: テストランナースクリプト経由
+bash ~/.claude/scripts/flutter-test-runner.sh
+bash ~/.claude/scripts/flutter-test-runner.sh test/unit/foo_test.dart
+
+# ❌ 禁止: パイプやリダイレクトを含む直接実行
+flutter test 2>&1 | tee /tmp/flutter_test_output.txt | wc -l
+flutter test > /tmp/test_output.txt 2>&1
+```
+
+スクリプトが EXIT_CODE、サマリー（末尾20行）、失敗箇所を自動出力する。
+詳細が必要な場合のみ `/tmp/test_output.txt` に対して grep/tail を使う。
+
 ### 完了報告フォーマット
 
 ```
