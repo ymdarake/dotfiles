@@ -96,12 +96,12 @@
 - **具体例**: `TimerNotifier.startWork` の Failure ケースで `await _refreshActiveActivitiesFlag()` を追加
 - **スキル化済み**: No
 
-## UI フォールバック色パターン
+## UI フォールバック値パターン（activeActivities 検索）
 - **カテゴリ**: バグ防止
-- **遭遇回数**: 1
+- **遭遇回数**: 2
 - **発見元**: time-tracker
-- **概要**: activeActivities 一覧からアクティビティを検索して色を解決する場合、アーカイブ済み等で見つからないケースでは null ではなくフォールバック色（defaultColorValue）を返す。null を返すと色が完全に消えてユーザーに視覚的な欠けが生じる。
-- **具体例**: `_TimerPageState._resolveActivityColor` で match.isEmpty の場合 `Color(ActivityData.defaultColorValue)` を返す
+- **概要**: activeActivities 一覧から activityId でエンティティを検索して属性（色、名前等）を解決する場合、アーカイブ済み等で見つからないケースではフォールバック値を返す。色の場合は defaultColorValue、名前の場合はステータスラベルのみ（アクティビティ名なし）。null を返すと UI 表示が欠けたり、不整合が生じる。
+- **具体例**: (1) `_TimerPageState._resolveActivityColor` で match.isEmpty の場合 `Color(ActivityData.defaultColorValue)` を返す; (2) STORY-034 `TimerNotifier._findActivityName` で見つからない場合 null を返し、`_buildPayload` でステータスラベルのみにフォールバック
 - **スキル化済み**: No
 
 ## FOUC 防止: Future.wait で並列取得 + 1回の state 更新
