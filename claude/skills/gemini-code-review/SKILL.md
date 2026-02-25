@@ -38,7 +38,8 @@ See [references/review-prompts.md](references/review-prompts.md) for prompt temp
 
 ```
 mcp__gemini-cli__chat(
-  prompt: "<review-prompts.md のテンプレート>"
+  prompt: "<review-prompts.md のテンプレート>",
+  model: "gemini-3.1-pro-preview"
 )
 ```
 

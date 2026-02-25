@@ -114,7 +114,7 @@ cat README.md           # READMEを確認
 
 ## Gemini CLI MCP設定
 
-- gemini-cli MCPのツール（`mcp__gemini-cli__chat`, `mcp__gemini-cli__googleSearch`, `mcp__gemini-cli__analyzeFile`）を呼び出す際は、**常に `model` 引数に `"gemini-3-pro-preview"` を指定する**
+- gemini-cli MCPのツール（`mcp__gemini-cli__chat`, `mcp__gemini-cli__googleSearch`, `mcp__gemini-cli__analyzeFile`）を呼び出す際は、**常に `model` 引数に `"gemini-3.1-pro-preview"` を指定する**
 
 ## 自動Geminiコードレビューポリシー
 

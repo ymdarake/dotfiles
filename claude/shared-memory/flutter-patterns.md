@@ -34,10 +34,10 @@
 
 ## Widget テストで画面外ボタンがタップできない問題
 - **カテゴリ**: テスト
-- **遭遇回数**: 2
-- **発見元**: time-tracker
-- **概要**: UI にコンテンツ（円グラフ等）を追加すると、既存の Widget テストで画面下部のボタンが画面外に押し出されタップ失敗する。`scrollUntilVisible` は複数 Scrollable があると `Too many elements` エラーになる。`tester.view.physicalSize` で画面サイズを拡大する方が安定。
-- **具体例**: `log_page_test.dart` の PDF/CSV ボタンテスト - 円グラフ追加で Offset(626.6, 752.0) が画面外 (800x600) に。`tester.view.physicalSize = Size(800, 1600)` + `devicePixelRatio = 1.0` で解決。`addTearDown` で `resetPhysicalSize` / `resetDevicePixelRatio` 必須。
+- **遭遇回数**: 3
+- **発見元**: time-tracker, shisoku-flutter
+- **概要**: UI にコンテンツ（テーブル、チャート等）を追加すると、既存の Widget テストで画面下部のボタンが画面外に押し出されタップ失敗する。対処法は2つ: (1) `tester.view.physicalSize` で画面サイズを拡大（Flutter 3.x の一部バージョンでは `binding.view` が使えず `tester.view` を使う必要あり）、(2) `ensureVisible` + `pumpAndSettle` でスクロール。SingleChildScrollView 1つの場合は `ensureVisible` が安定。複数 Scrollable がある場合は画面サイズ拡大の方が安定。
+- **具体例**: (1) `log_page_test.dart` の PDF/CSV ボタンテスト - 円グラフ追加で画面外に。`tester.view.physicalSize = Size(800, 1600)` で解決。(2) `end_page_test.dart` - ResultTable 10行でボタンが画面外に。`ensureVisible(find.text('もう一度'))` + `pumpAndSettle` で解決。Flutter 3.41.0 では `TestWidgetsFlutterBinding` に `view` getter がなく、`tester.view` を使う必要あり。
 - **スキル化済み**: No
 
 ## fl_chart のテスト戦略（PieChart / BarChart）
@@ -154,10 +154,10 @@
 
 ## Widget テストで find.text が複数 Widget にマッチする問題
 - **カテゴリ**: テスト
-- **遭遇回数**: 3
-- **発見元**: time-tracker
-- **概要**: `find.text('X')` が対象 Widget 以外の別 Widget（DurationSummaryRow の「稼働」/「休憩」ラベル等）にもマッチして `findsOneWidget` が失敗する。`find.descendant(of: find.byType(TargetWidget), matching: find.text('X'))` でスコープを限定する。CustomPaint の多重マッチと同じ原理。
-- **具体例**: `timer_page_test.dart` - EntryTile の「稼働」テキストが DurationSummaryRow にも存在; `day_detail_page_test.dart` - 「休憩」テキストが DurationSummaryRow と EntryTile の両方に存在。find.descendant(of: find.byType(EntryTimeline)) でスコープ限定して解決。
+- **遭遇回数**: 4
+- **発見元**: time-tracker, shisoku-flutter
+- **概要**: `find.text('X')` が対象 Widget 以外の別 Widget にもマッチして `findsOneWidget` が失敗する。対処法: (1) `find.descendant(of: find.byType(TargetWidget), matching: find.text('X'))` でスコープを限定する、(2) `findsAtLeast(1)` に変更する（テキストの存在確認だけで十分な場合）。
+- **具体例**: (1) `timer_page_test.dart` - EntryTile の「稼働」テキストが DurationSummaryRow にも存在; (2) `day_detail_page_test.dart` - 「休憩」テキストが両方に存在; (3) `end_page_test.dart` - EndPage タイトル「結果」と ResultTable ヘッダー「結果」列が重複。`findsAtLeast(1)` で対処。
 - **スキル化済み**: No
 
 ## Service 層での入力 ID 存在チェック
@@ -178,10 +178,42 @@
 
 ## Interface メソッド追加時の Mock スタブ漏れ
 - **カテゴリ**: テスト
-- **遭遇回数**: 2
-- **発見元**: time-tracker
+- **遭遇回数**: 4
+- **発見元**: time-tracker, shisoku-flutter
 - **概要**: domain interface にメソッドを追加した場合、mocktail の Mock クラスは未スタブのメソッドに対して null を返す。`Future<bool>` を返すメソッドでスタブが未設定だと `type 'Null' is not a subtype of type 'Future<bool>'` エラーになる。テストの setUp で全 Mock メソッドにデフォルトスタブを設定しておくことが重要。新たに `Duration` 型を使うメソッドを追加する場合は `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` も必要。
-- **具体例**: (1) STORY-020 `NotificationService.requestNotificationPermission()` 追加時、既存テスト6件が失敗。setUp にスタブ追加で解決。(2) STORY-033 `sendTimerData()` 追加時、`registerFallbackValue` 未設定で7テスト失敗。`setUpAll` に `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` 追加で解決。
+- **具体例**: (1) STORY-020 `NotificationService.requestNotificationPermission()` 追加時、既存テスト6件が失敗。setUp にスタブ追加で解決。(2) STORY-033 `sendTimerData()` 追加時、`registerFallbackValue` 未設定で7テスト失敗。`setUpAll` に `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` 追加で解決。(3) STORY-008 `RankingRepository` Provider 追加時、EndPage を描画する全テスト（end_page_test, game_page_test, widget_test）で `rankingRepositoryProvider.overrideWithValue(mockRankingRepository)` が必要。
+- **スキル化済み**: No
+
+## Dart while 文での case パターンマッチング非対応
+- **カテゴリ**: バグ防止
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: Dart 3.x では `if-case` 構文は使えるが、`while (_current case SomeType(value: final v) when ...)` のような while-case 構文はコンパイルエラーになる。ヘルパーメソッドで演算子マッチングを行い、while ループの条件式を通常の null チェックにする必要がある。
+- **具体例**: `ExpressionEvaluator` の再帰下降パーサーで `_matchOperator(Set<String>)` ヘルパーを導入し、`while ((op = _matchOperator(ops)) != null)` に書き換え
+- **スキル化済み**: No
+
+## 純粋計算クラスの domain 層配置パターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 2
+- **発見元**: time-tracker, shisoku-flutter
+- **概要**: dart:core のみ依存する純粋計算ロジックは static メソッドのみの class として domain 層に配置する。private コンストラクタでインスタンス化を防止。外部パッケージ・Flutter 依存なしの制約を満たす。
+- **具体例**: time-tracker: `CalculationService` (static メソッド集), shisoku-flutter: `ExpressionEvaluator` (再帰下降パーサー)
+- **スキル化済み**: No
+
+## SharedPreferences 関数注入によるローカルストレージ Repository テスト可能パターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: SharedPreferences への直接依存を避けるため、`StringLoader` (`Future<String?> Function(String key)`) と `StringSaver` (`Future<bool> Function(String key, String value)`) の typedef を定義し、コンストラクタ注入する。テスト時は `Map<String, String>` をバッキングストアとして使用し、実行時は `SharedPreferences.getString` / `setString` を注入する。AssetProblemRepository の `JsonLoader` 関数注入パターンのローカルストレージ版。
+- **具体例**: `LocalRankingRepository(loadString: (key) async => storage[key], saveString: (key, value) async { storage[key] = value; return true; })` - テスト時は `Map<String, String> storage = {}` を使用
+- **スキル化済み**: No
+
+## JsonLoader 関数注入による Asset テスト可能パターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: rootBundle.loadString 等のアセット読み込みをテストする際、typedef で関数型を定義しコンストラクタ注入する。テスト時はインメモリ JSON 文字列を返す関数を注入し、Random もシード固定で注入することで決定的テストが可能。
+- **具体例**: `AssetProblemRepository(loadJson: (_) async => testJson, random: Random(42))` - JsonLoader typedef + テスト用 `_loaderReturning()` / `_loaderThrowing()` ヘルパー
 - **スキル化済み**: No
 
 ## TaskHandler Isolate へのデータ送信時の二重計算防止
@@ -190,4 +222,85 @@
 - **発見元**: time-tracker
 - **概要**: Main isolate から TaskHandler（別 isolate）にタイマーデータを送信する際、「累積時間」として total（完了済み + 進行中）を渡すと、TaskHandler 側で進行中分を再度加算して二重計算になる。累積時間は「完了済みエントリのみの合計」を渡し、TaskHandler 側で `累積 + (now - currentEntryStartedAt)` として合算するのが正しい。
 - **具体例**: STORY-033 `_notifyStart`/`_notifyUpdate` で `CalculationService.calculateWorkDuration(entries, now: now)` (total) ではなく `calculateWorkDuration(entries)` (completedのみ) を `sendTimerData.accumulatedWorkDuration` に渡す。Gemini レビューで Critical 指摘として検出。
+- **スキル化済み**: No
+
+## atom ウィジェットの Riverpod 非依存テストパターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 2
+- **発見元**: shisoku-flutter
+- **概要**: Riverpod 非依存の pure widget（atom）は ProviderScope なしで `MaterialApp(home: Scaffold(body: Widget(...)))` でラップしてテストする。コールバック検証には変数キャプチャ（`Difficulty? selectedValue; onSelect: (d) { selectedValue = d; }`）を使用。選択状態の検証は `find.ancestor(of: find.text(label), matching: find.byType(FilledButton/OutlinedButton))` で対象ボタンの型を確認する。
+- **具体例**: `rules_display_test.dart` - `MaterialApp(home: Scaffold(body: SingleChildScrollView(child: RulesDisplay())))` でラップ; `difficulty_selector_test.dart` - `buildSubject(selectedDifficulty:, onSelect:)` ヘルパーで状態とコールバックを注入
+- **スキル化済み**: No
+
+## FakeAsync 内での ProviderContainer ライフサイクル
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: FakeAsync().run() 内で ProviderContainer を生成する場合、addTearDown は FakeAsync のスコープ外なので使えない。FakeAsync コールバック末尾で手動 dispose する。また setUp/tearDown で container を管理する通常パターンは FakeAsync と相性が悪いため、テストごとにインラインで container を生成・破棄するか、ヘルパー関数で共通化する。
+- **具体例**: `timer_notifier_test.dart` の `runTimerTest` ヘルパー: FakeAsync().run 内で container 生成 → body 実行 → stop + dispose
+
+## GamePage 統合テストでの状態遷移ヘルパーパターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 2
+- **発見元**: shisoku-flutter
+- **概要**: ConsumerStatefulWidget のページテストで、テスト対象ページに到達するために複数のフェーズ遷移が必要な場合、`ProviderScope.containerOf(tester.element(...))` で container を取得し、Notifier のメソッドを直接呼んで遷移させるヘルパーを作成する。UI 操作（tap）+ Notifier 直接呼び出しの組み合わせで、テスト対象ページの前提状態を効率的にセットアップできる。
+- **具体例**: `game_page_test.dart` の `navigateToPlaying()` - tester.tap('スタート') で idle->countdown 遷移 + container.read(notifier).completeCountdown() で countdown->playing 遷移
+- **スキル化済み**: No
+
+## ConsumerStatefulWidget でのローカル State + Value Object パターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 2
+- **発見元**: shisoku-flutter
+- **概要**: 1問ごとにリセットされる一時的な入力状態は Notifier ではなく ConsumerStatefulWidget のローカル State で管理する。生のコレクション型（List<Token>等）ではなく、Value Object（Expression）でラップしバリデーションを型レベルで保証する。Widget は setState() と Value Object のメソッド呼び出しのみを行う。これにより Notifier はゲーム進行状態のみに集中でき、バリデーション漏れが構造的に防止される。
+- **具体例**: `GamePage._expression` (Expression) をローカル State で管理、`expression.addNumber/addOperator/...` でバリデーション内蔵の操作、`GameSessionNotifier` はゲーム進行（skipQuestion, submitAnswer）のみ担当。以前は `List<Token>` + `ExpressionInputValidator` (static class) だったが、ADR-001 で Value Object に統合。
+- **スキル化済み**: No
+
+## 【設計原則】Always-Valid Domain Model: バリデーション済みデータのドメインオブジェクト昇格
+- **カテゴリ**: 設計原則
+- **遭遇回数**: 2
+- **発見元**: shisoku-flutter (ADR-001)
+- **概要**: domain 層にバリデーションロジックがある場合、バリデーション済みの結果をドメインオブジェクト（Value Object や Entity）に昇格させる。static Validator + 生のコレクション型（List, Map 等）の組み合わせは Primitive Obsession のシグナル。ドメインオブジェクトはファクトリメソッド（addXxx, create, from 等）経由でのみインスタンスを生成し、不正な状態を構造的に不可能にする（Always-Valid Domain Model）。Value Object はこの原則の代表的な実現手段。
+- **判断基準（Architect 向け）**:
+  - domain 層に static Validator + 生のコレクション/プリミティブ型がペアで存在する → VO 昇格を検討
+  - UI 層が Validator を呼び忘れると不正状態が生まれる設計 → VO で防止必須
+  - interface 化は「実装差し替えが必要か」で判断（純粋計算ロジックは interface 不要）
+- **実装基準（Developer 向け）**:
+  - VO は `final class` + `const` コンストラクタ + immutable
+  - ファクトリメソッド（addXxx）は `VO?` を返す（エラー種別不要なら Result 型は過剰）
+  - `canAddXxx` クエリメソッドも用意（UI のボタン有効/無効の事前判定用）
+  - テスト移行は既存 Validator テストケースを VO の API に1対1で移行
+- **具体例**: `ExpressionInputValidator` (static) + `List<Token>` → `Expression` (Value Object)。ADR-001 に基づく。
+- **参考**: Martin Fowler: Value Object, Enterprise Craftsmanship: Always-Valid Domain Model
+- **スキル化済み**: No
+
+## Timer ベースの遅延進行 + 入力ロックパターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: 正答メッセージを一定時間表示してから自動進行する場合、(1) setState で入力ロック + メッセージ表示、(2) Timer で遅延後に Notifier.advance() + setState でリセット、(3) dispose で Timer キャンセル、(4) Timer コールバック内で mounted チェック。UI 側のローカル State で管理し、Notifier には「結果記録」と「次問題遷移」を分離したメソッドを用意する。テストでは `tester.pump(Duration)` で Timer を進める。
+- **具体例**: `GamePage._onCorrectAnswer` - `_isInputLocked = true` + `Timer(2000ms)` → `advanceToNextQuestion()` + ロック解除。Notifier の `submitAnswer` は結果記録のみ、`advanceToNextQuestion` は遷移のみ。
+- **スキル化済み**: No
+
+## 文字列比較による条件分岐を enum に置換するパターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: UI で `_judgmentMessage == '正解!'` のような文字列比較で色やスタイルを分岐している場合、domain の enum 型（AnswerResult 等）を State に保持し、getter で switch 分岐する方が型安全。enum が既に存在するなら String を保持する理由はない。
+- **具体例**: `GamePage._lastAnswerResult: AnswerResult?` + `_judgmentMessageText` / `_judgmentMessageColor` getter。リファクタリングで `_judgmentMessage: String?` から置換。
+- **スキル化済み**: No
+
+## Value Object テスト用ヘルパー関数の意図的重複パターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: Value Object の `create()` ファクトリが `Result` を返す場合、テスト内で `(VO.create('x') as Success<VO, Error>).value` の展開コードが冗長になる。`_voName(String raw)` のようなファイルスコープのヘルパー関数で簡潔化する。テストファイル間の依存を避けるため、各テストファイルに同じヘルパーを定義するのは意図的な重複（テスト独立性を優先）。共通テストユーティリティに切り出すと import 管理が複雑化し、テストの自己完結性が損なわれる。
+- **具体例**: `_rankingName(String raw)` が `ranking_name_test.dart`, `local_ranking_repository_test.dart`, `ranking_page_test.dart` の3ファイルに同一定義。
+- **スキル化済み**: No
+
+## Static Validator から Value Object へのリファクタリングパターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: Static メソッドのみの Validator クラスと生のコレクション型の組み合わせを、Always-Valid な Value Object に統合するリファクタリング。手順: (1) Value Object のテストを先に書く（既存テストケースを API に移行）、(2) Value Object を実装（Validator のロジックを移動）、(3) UI の参照を切り替え、(4) 旧 Validator ファイルと旧テストを削除、(5) 全テスト PASS を確認。canAddXxx クエリメソッドは UI のボタン有効/無効判定用に残す。addXxx は null を返す設計（Result 型は不要）。
+- **具体例**: `ExpressionInputValidator` (static class) + `List<Token>` → `Expression` (final class, Value Object)。ADR-001 に基づく。
 - **スキル化済み**: No
