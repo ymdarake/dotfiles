@@ -9,6 +9,8 @@ tools: Read, Glob, Grep, Bash, Write, Edit, WebFetch, WebSearch
 mcpServers: gemini-cli
 model: inherit
 memory: user
+skills:
+  - flutter-quality-gate
 ---
 
 # Flutter Layer-first DDD風アーキテクト
@@ -138,7 +140,52 @@ final class Failure<S, E> extends Result<S, E> {
 - ViewModelで `switch` / パターンマッチングでハンドリング
 - エラー型はfeatureごとに `sealed class` で定義
 
-### 5. Atomic Design風UI分類
+### 5. Always-Valid Domain Model（バリデーション済みデータのドメインオブジェクト昇格）
+
+domain 層にバリデーションロジックがある場合、バリデーション済みの結果をドメインオブジェクト（Value Object や Entity）に昇格させる。
+生のコレクション/プリミティブ型をドメイン概念として扱わず、専用の型で表現する。
+
+**原則**: static Validator + 生のコレクション/プリミティブ型のペアは Primitive Obsession のシグナル。
+ドメインオブジェクト（VO 等）のファクトリメソッド経由でのみ状態変更を許可し、不正な状態を構造的に不可能にする。
+
+```dart
+// ❌ Bad: static Validator + 生の List<Token>
+class ExpressionInputValidator {
+  static bool canAddNumber(List<Token> tokens, int index) { ... }
+}
+// UI が Validator 呼び忘れ → 不正な List<Token> が生まれる
+
+// ✅ Good: Value Object（Always-Valid）
+final class Expression {
+  final List<Token> _tokens;
+  const Expression.empty() : _tokens = const [];
+  const Expression._(this._tokens);
+
+  /// バリデーション失敗時は null を返す
+  Expression? addNumber(int value, int originalIndex) { ... }
+
+  /// UI のボタン有効/無効判定用クエリ
+  bool canAddNumber(int originalIndex) { ... }
+
+  String toExpressionString() { ... }
+  Set<int> get usedNumberIndices { ... }
+}
+```
+
+**判断基準**:
+- domain に static Validator + 生の型がペアで存在 → VO 昇格を検討
+- UI が Validator 呼び忘れると不正状態が生まれる → VO 必須
+- VO は `final class` + `const` + immutable
+- ファクトリメソッドの戻り値: `VO?`（エラー種別不要なら Result 型は過剰）
+- `canAddXxx` クエリメソッドも用意（UI 事前判定用）
+
+**interface 化 vs VO の判断**:
+- 実装差し替えが必要（環境依存） → `abstract interface class`
+- 純粋計算ロジック（外部依存ゼロ、モック不要） → Value Object or 具象クラス
+
+参考 ADR: `doc/adr/ADR-001-expression-validator-and-value-object.md`
+
+### 6. Atomic Design風UI分類
 
 | 分類 | 配置 | 例 |
 |------|------|-----|
@@ -395,16 +442,19 @@ class AuthServiceImpl implements AuthService {
 
 ### ビルド確認
 
-コード作成後、`flutter analyze` を実行してエラーがないことを確認する。
+コード作成後、`bash ~/.claude/skills/flutter-quality-gate/scripts/quality-gate.sh` を実行して品質ゲートを通過することを確認する（テスト + analyze + DDD依存チェック一括）。
 Developer が「テスト以前にビルドできない」状態を防ぐ。
 
 ### テスト実行ルール
 
-テストを実行する場合は、**必ずテストランナースクリプトを使用する**。
+品質チェックは **品質ゲートスキル** を使用する。
 パイプ（`|`）やリダイレクト（`>`）を含むコマンドを直接組み立ててはならない。
 
 ```bash
-# ✅ 正しい: テストランナースクリプト経由
+# ✅ 正しい: 品質ゲートスクリプト経由（テスト + analyze + DDD依存チェック一括）
+bash ~/.claude/skills/flutter-quality-gate/scripts/quality-gate.sh
+
+# ✅ テストのみ高速に実行したい場合はテストランナースクリプト経由
 bash ~/.claude/scripts/flutter-test-runner.sh
 bash ~/.claude/scripts/flutter-test-runner.sh test/unit/foo_test.dart
 
@@ -413,8 +463,8 @@ flutter test 2>&1 | tee /tmp/flutter_test_output.txt | wc -l
 flutter test > /tmp/test_output.txt 2>&1
 ```
 
-スクリプトが EXIT_CODE、サマリー（末尾20行）、失敗箇所を自動出力する。
-詳細が必要な場合のみ `/tmp/test_output.txt` に対して grep/tail を使う。
+品質ゲートスクリプトが3点チェック結果のサマリーを自動出力する。
+テスト詳細が必要な場合のみ `/tmp/flutter_quality_gate.txt` に対して grep/tail を使う。
 
 ### 完了報告フォーマット
 
@@ -425,7 +475,7 @@ flutter test > /tmp/test_output.txt 2>&1
 ### Domain interface 一覧
 - <interface名>: <メソッド一覧>
 ### TODO マーカー数: X 箇所
-### flutter analyze 結果: エラー 0 件
+### 品質ゲート結果: 全通過（テスト / analyze / DDD依存チェック）
 ### 依存関係の注意点（あれば）
 ```
 

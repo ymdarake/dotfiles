@@ -17,6 +17,7 @@ skills:
   - stale-state-guard
   - skill-creator
   - flutter-fl-chart-test
+  - flutter-quality-gate
 ---
 
 # Flutter Developer エージェント
@@ -150,6 +151,7 @@ final logicalDate = DateTime(local.year, local.month, local.day);
 2. **完了を待つ**: 必ずコマンドの終了を待ってから次のアクションに進む
 3. **出力を確認する**: スクリプトが EXIT_CODE、サマリー（末尾20行）、失敗箇所を自動出力する
 4. **詳細が必要な場合のみ** `/tmp/test_output.txt` に対して grep/tail を使う（テストを再実行しない）
+5. **最終品質チェック**: Refactor完了後、`bash ~/.claude/skills/flutter-quality-gate/scripts/quality-gate.sh` で一括チェック（テスト + analyze + DDD依存チェック）
 
 ### ⚠️ 絶対ルール: Gemini は MCP 経由のみ
 
@@ -191,16 +193,18 @@ final logicalDate = DateTime(local.year, local.month, local.day);
 
 テストが通った状態でDRY原則の適用、命名改善、不要コード削除を行う。
 
-**ゲート条件**: `flutter test` で全テストが**成功する**こと。
+**ゲート条件**: `bash ~/.claude/skills/flutter-quality-gate/scripts/quality-gate.sh` で全チェック（テスト + analyze + DDD依存チェック）が**通過する**こと。
 
 **テスト失敗時の自動修正（最大2回）:**
 
 1. リファクタリングによるテスト失敗を分析
 2. 修正を適用（または変更を取り消し）
-3. `flutter test` を再実行
+3. `quality-gate.sh` を再実行
 4. → 2回失敗したらリファクタリングを取り消して Green 状態に戻す
 
 ### Phase 4: Review（レビュー + 修正）
+
+**前提条件**: Phase 3 の品質ゲート（`quality-gate.sh`）が全通過していること。
 
 `flutter-ddd-review` と `gemini-code-review` の知識に従い、`mcp__gemini-cli__chat` で2種類のレビューを実行する:
 
