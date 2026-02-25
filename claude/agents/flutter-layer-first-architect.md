@@ -338,6 +338,66 @@ final class <SpecificConstraint>Error extends <Feature>Error {
 - Infrastructure 層でサードパーティ例外（DB例外等）をキャッチし domain エラーに変換する
 - 予期しない例外（プログラムバグ等）は `Result` でラップせず、そのまま throw させる
 
+### 10. 純粋計算クラスの domain 層配置
+
+dart:core のみ依存する純粋計算ロジックは static メソッドのみの class として domain 層に配置する。
+
+```dart
+// domain/<feature>/calculation_service.dart
+class CalculationService {
+  CalculationService._(); // private コンストラクタでインスタンス化防止
+
+  static Duration calculateWorkDuration(List<TimeEntryData> entries, {DateTime? now}) {
+    // 純粋計算のみ
+  }
+}
+```
+
+**判断基準**:
+- 外部パッケージ・Flutter 依存なし → interface 化不要
+- テストでモック不要（入力→出力の純粋関数のため直接テスト可能）
+- Dart のイディオムとしてはトップレベル関数が推奨（`avoid_classes_with_only_static_members`）。関数が多い場合は static class + private コンストラクタで名前空間をまとめてもよい
+
+### 11. 一時的入力状態の管理
+
+1問ごと・1操作ごとにリセットされる一時的な入力状態は Notifier ではなく `ConsumerStatefulWidget` のローカル State で管理する。
+
+```dart
+// ✅ ローカル State + Value Object
+class _GamePageState extends ConsumerState<GamePage> {
+  Expression _expression = const Expression.empty(); // 一時的な入力
+
+  void _onNumberTap(int value, int index) {
+    final result = _expression.addNumber(value, index);
+    if (result != null) setState(() => _expression = result);
+  }
+}
+```
+
+**原則**:
+- Notifier はビジネス状態（ゲーム進行、セッション管理等）のみに集中
+- 生のコレクション型（`List<Token>` 等）ではなく Value Object でラップしバリデーションを型レベルで保証
+
+### 12. Service 不要時のパターン
+
+以下のすべてを満たす場合、Service 層を設けず `FutureProvider.autoDispose` で直接構成する:
+
+```dart
+// providers.dart
+final dailyGoalProgressProvider = FutureProvider.autoDispose.family<GoalProgress, DateTime>((ref, date) async {
+  final entries = await ref.watch(logRepositoryProvider).getEntriesForDate(date);
+  final duration = CalculationService.calculateWorkDuration(entries);
+  final goal = ref.watch(dailyGoalSettingProvider);
+  return GoalProgress(current: duration, target: goal);
+});
+```
+
+**判断基準**（設計原則7の補完）:
+- Repository の単一メソッド + 純粋関数で完結
+- 他の Repository/Service との連携が不要
+- 状態変更操作がない（読み取り専用）
+- Provider 内では `ref.read` ではなく `ref.watch` を使用する
+
 ## 分析ワークフロー
 
 ### Step 1: 既存構成の探索

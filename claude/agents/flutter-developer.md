@@ -17,6 +17,7 @@ skills:
   - stale-state-guard
   - skill-creator
   - flutter-fl-chart-test
+  - flutter-widget-test-patterns
   - flutter-quality-gate
 ---
 
@@ -120,6 +121,49 @@ final date = DateTime.parse(row.read<String>('started_at'));
 final utc = DateTime.parse(row.read<String>('started_at'));
 final local = utc.toLocal();
 final logicalDate = DateTime(local.year, local.month, local.day);
+```
+
+### 外部サービス連携の try-catch 握りつぶし
+
+ビジネスロジック成功後の外部サービス（通知、アナリティクス等）は失敗しても主機能に影響させない:
+
+```dart
+// ✅ try-catch で握りつぶし + debugPrint
+try {
+  await _notificationService.show(title, body);
+} catch (e) {
+  debugPrint('Notification failed: $e');
+}
+```
+
+テストでは `thenThrow` + 例外非伝播の verify:
+
+```dart
+when(() => mockNotification.show(any(), any())).thenThrow(Exception('fail'));
+await notifier.startWork(...); // 例外が伝播しないことを確認
+verify(() => mockNotification.show(any(), any())).called(1);
+```
+
+### UI フォールバック値パターン
+
+エンティティ検索で見つからない場合はデフォルト値を返す。null を返すと UI 表示が欠ける:
+
+```dart
+// ✅ firstOrNull + ?? でフォールバック値を返す（null ではなく）
+final match = activities.where((a) => a.id == targetId).firstOrNull;
+return Color(match?.colorValue ?? ActivityData.defaultColorValue);
+```
+
+### 入力バリデーションの二重防御
+
+UI 制約（DatePicker `lastDate` 等）**と** Service 層チェック（`FutureDateError` 等）の両方を設定する。UI バイパス経路に備えた防御的プログラミング:
+
+```dart
+// UI 側: DatePicker で未来日を選択不可に
+showDatePicker(lastDate: DateTime.now());
+
+// Service 側: 追加の防御チェック
+if (date.isAfter(DateTime.now())) return Result.failure(const FutureDateError());
 ```
 
 ## 振る舞い

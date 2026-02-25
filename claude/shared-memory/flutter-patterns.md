@@ -38,7 +38,7 @@
 - **発見元**: time-tracker, shisoku-flutter
 - **概要**: UI にコンテンツ（テーブル、チャート等）を追加すると、既存の Widget テストで画面下部のボタンが画面外に押し出されタップ失敗する。対処法は2つ: (1) `tester.view.physicalSize` で画面サイズを拡大（Flutter 3.x の一部バージョンでは `binding.view` が使えず `tester.view` を使う必要あり）、(2) `ensureVisible` + `pumpAndSettle` でスクロール。SingleChildScrollView 1つの場合は `ensureVisible` が安定。複数 Scrollable がある場合は画面サイズ拡大の方が安定。
 - **具体例**: (1) `log_page_test.dart` の PDF/CSV ボタンテスト - 円グラフ追加で画面外に。`tester.view.physicalSize = Size(800, 1600)` で解決。(2) `end_page_test.dart` - ResultTable 10行でボタンが画面外に。`ensureVisible(find.text('もう一度'))` + `pumpAndSettle` で解決。Flutter 3.41.0 では `TestWidgetsFlutterBinding` に `view` getter がなく、`tester.view` を使う必要あり。
-- **スキル化済み**: No
+- **スキル化済み**: Yes
 
 ## fl_chart のテスト戦略（PieChart / BarChart）
 - **カテゴリ**: テスト
@@ -158,7 +158,7 @@
 - **発見元**: time-tracker, shisoku-flutter
 - **概要**: `find.text('X')` が対象 Widget 以外の別 Widget にもマッチして `findsOneWidget` が失敗する。対処法: (1) `find.descendant(of: find.byType(TargetWidget), matching: find.text('X'))` でスコープを限定する、(2) `findsAtLeast(1)` に変更する（テキストの存在確認だけで十分な場合）。
 - **具体例**: (1) `timer_page_test.dart` - EntryTile の「稼働」テキストが DurationSummaryRow にも存在; (2) `day_detail_page_test.dart` - 「休憩」テキストが両方に存在; (3) `end_page_test.dart` - EndPage タイトル「結果」と ResultTable ヘッダー「結果」列が重複。`findsAtLeast(1)` で対処。
-- **スキル化済み**: No
+- **スキル化済み**: Yes
 
 ## Service 層での入力 ID 存在チェック
 - **カテゴリ**: バグ防止
@@ -182,7 +182,7 @@
 - **発見元**: time-tracker, shisoku-flutter
 - **概要**: domain interface にメソッドを追加した場合、mocktail の Mock クラスは未スタブのメソッドに対して null を返す。`Future<bool>` を返すメソッドでスタブが未設定だと `type 'Null' is not a subtype of type 'Future<bool>'` エラーになる。テストの setUp で全 Mock メソッドにデフォルトスタブを設定しておくことが重要。新たに `Duration` 型を使うメソッドを追加する場合は `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` も必要。
 - **具体例**: (1) STORY-020 `NotificationService.requestNotificationPermission()` 追加時、既存テスト6件が失敗。setUp にスタブ追加で解決。(2) STORY-033 `sendTimerData()` 追加時、`registerFallbackValue` 未設定で7テスト失敗。`setUpAll` に `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` 追加で解決。(3) STORY-008 `RankingRepository` Provider 追加時、EndPage を描画する全テスト（end_page_test, game_page_test, widget_test）で `rankingRepositoryProvider.overrideWithValue(mockRankingRepository)` が必要。
-- **スキル化済み**: No
+- **スキル化済み**: Yes
 
 ## Dart while 文での case パターンマッチング非対応
 - **カテゴリ**: バグ防止
@@ -230,7 +230,7 @@
 - **発見元**: shisoku-flutter
 - **概要**: Riverpod 非依存の pure widget（atom）は ProviderScope なしで `MaterialApp(home: Scaffold(body: Widget(...)))` でラップしてテストする。コールバック検証には変数キャプチャ（`Difficulty? selectedValue; onSelect: (d) { selectedValue = d; }`）を使用。選択状態の検証は `find.ancestor(of: find.text(label), matching: find.byType(FilledButton/OutlinedButton))` で対象ボタンの型を確認する。
 - **具体例**: `rules_display_test.dart` - `MaterialApp(home: Scaffold(body: SingleChildScrollView(child: RulesDisplay())))` でラップ; `difficulty_selector_test.dart` - `buildSubject(selectedDifficulty:, onSelect:)` ヘルパーで状態とコールバックを注入
-- **スキル化済み**: No
+- **スキル化済み**: Yes
 
 ## FakeAsync 内での ProviderContainer ライフサイクル
 - **カテゴリ**: テスト
