@@ -43,6 +43,8 @@ mcp__gemini-cli__chat(
 )
 ```
 
+**フォールバック:** `gemini-3.1-pro-preview` が利用できない場合（エラー、タイムアウト等）は `"gemini-3-flash-preview"` を使用する。
+
 ### Step 2: Present Findings
 
 Summarize Gemini's findings to the user, grouped by severity (High → Medium → Low). Ask if they want to apply fixes.
