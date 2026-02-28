@@ -34,7 +34,7 @@
 
 ## Widget テストで画面外ボタンがタップできない問題
 - **カテゴリ**: テスト
-- **遭遇回数**: 3
+- **遭遇回数**: 4
 - **発見元**: time-tracker, shisoku-flutter
 - **概要**: UI にコンテンツ（テーブル、チャート等）を追加すると、既存の Widget テストで画面下部のボタンが画面外に押し出されタップ失敗する。対処法は2つ: (1) `tester.view.physicalSize` で画面サイズを拡大（Flutter 3.x の一部バージョンでは `binding.view` が使えず `tester.view` を使う必要あり）、(2) `ensureVisible` + `pumpAndSettle` でスクロール。SingleChildScrollView 1つの場合は `ensureVisible` が安定。複数 Scrollable がある場合は画面サイズ拡大の方が安定。
 - **具体例**: (1) `log_page_test.dart` の PDF/CSV ボタンテスト - 円グラフ追加で画面外に。`tester.view.physicalSize = Size(800, 1600)` で解決。(2) `end_page_test.dart` - ResultTable 10行でボタンが画面外に。`ensureVisible(find.text('もう一度'))` + `pumpAndSettle` で解決。Flutter 3.41.0 では `TestWidgetsFlutterBinding` に `view` getter がなく、`tester.view` を使う必要あり。
@@ -128,10 +128,26 @@
 - **具体例**: `_ActivityFilterDropdown` で `DropdownButton<int?>` を使用、value は `selectedActivity?.id`、onChanged で `activeActivities.firstWhere((a) => a.id == activityId)` で逆引き
 - **スキル化済み**: No
 
+## audioplayers テスト環境での MethodChannel モック設定
+- **カテゴリ**: テスト
+- **遭遇回数**: 2
+- **発見元**: shisoku-flutter
+- **概要**: audioplayers パッケージを使用する実装クラスのユニットテストでは、`xyz.luan/audioplayers.global` と `xyz.luan/audioplayers` の2つの MethodChannel にモックハンドラを設定する必要がある。設定しないと `MissingPluginException` が発生する。`TestWidgetsFlutterBinding.ensureInitialized()` も必須。
+- **具体例**: `audio_player_service_test.dart` の setUpAll で `setMockMethodCallHandler(channel, (call) async => null)` を2チャネル分設定
+- **スキル化済み**: No
+
+## WAV バイト列のプログラマティック生成パターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 2
+- **発見元**: shisoku-flutter
+- **概要**: Flutter でオシレーター方式の効果音を実現するため、サイン波/三角波のサンプルデータからメモリ内で WAV バイト列を構築し、audioplayers の BytesSource で再生する。アセットファイル不要でプログラマティック音声生成が可能。WAV ヘッダー (44バイト) + PCM 16bit サンプルデータの構成。初期化時に全 SfxType の WAV データをキャッシュし、再生時は AudioPlayer + BytesSource で fire-and-forget 再生する。
+- **具体例**: `AudioPlayerService._buildWav()` - RIFF/fmt/data チャンク構築、`_sineWave()` / `_triangleWave()` でサンプル生成
+- **スキル化済み**: No
+
 ## 外部サービス連携の try-catch 握りつぶしパターン
 - **カテゴリ**: エラーハンドリング
-- **遭遇回数**: 3
-- **発見元**: time-tracker
+- **遭遇回数**: 4
+- **発見元**: time-tracker, shisoku-flutter
 - **概要**: ビジネスロジック成功後に呼び出す外部サービス（通知、アナリティクス等）は、失敗してもアプリの主要機能に影響させない。try-catch で例外を握りつぶし debugPrint でログ出力する。テストでは Mock に thenThrow を設定して、例外伝播しないことを verify する。権限リクエスト等の前処理も同じ try-catch ブロック内に置くことで、権限拒否時も握りつぶされる。
 - **具体例**: `TimerNotifier._notifyStart/Update/Stop` で NotificationService の例外を catch。テスト: `timer_notification_test.dart` の「通知失敗がアプリ動作に影響しない」グループ。STORY-020: `requestNotificationPermission` を `_notifyStart` の try-catch 内に追加。
 - **スキル化済み**: No
@@ -178,7 +194,7 @@
 
 ## Interface メソッド追加時の Mock スタブ漏れ
 - **カテゴリ**: テスト
-- **遭遇回数**: 4
+- **遭遇回数**: 5
 - **発見元**: time-tracker, shisoku-flutter
 - **概要**: domain interface にメソッドを追加した場合、mocktail の Mock クラスは未スタブのメソッドに対して null を返す。`Future<bool>` を返すメソッドでスタブが未設定だと `type 'Null' is not a subtype of type 'Future<bool>'` エラーになる。テストの setUp で全 Mock メソッドにデフォルトスタブを設定しておくことが重要。新たに `Duration` 型を使うメソッドを追加する場合は `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` も必要。
 - **具体例**: (1) STORY-020 `NotificationService.requestNotificationPermission()` 追加時、既存テスト6件が失敗。setUp にスタブ追加で解決。(2) STORY-033 `sendTimerData()` 追加時、`registerFallbackValue` 未設定で7テスト失敗。`setUpAll` に `registerFallbackValue(Duration.zero)` + `registerFallbackValue(DateTime(...))` 追加で解決。(3) STORY-008 `RankingRepository` Provider 追加時、EndPage を描画する全テスト（end_page_test, game_page_test, widget_test）で `rankingRepositoryProvider.overrideWithValue(mockRankingRepository)` が必要。
@@ -202,7 +218,7 @@
 
 ## SharedPreferences 関数注入によるローカルストレージ Repository テスト可能パターン
 - **カテゴリ**: テスト
-- **遭遇回数**: 1
+- **遭遇回数**: 2
 - **発見元**: shisoku-flutter
 - **概要**: SharedPreferences への直接依存を避けるため、`StringLoader` (`Future<String?> Function(String key)`) と `StringSaver` (`Future<bool> Function(String key, String value)`) の typedef を定義し、コンストラクタ注入する。テスト時は `Map<String, String>` をバッキングストアとして使用し、実行時は `SharedPreferences.getString` / `setString` を注入する。AssetProblemRepository の `JsonLoader` 関数注入パターンのローカルストレージ版。
 - **具体例**: `LocalRankingRepository(loadString: (key) async => storage[key], saveString: (key, value) async { storage[key] = value; return true; })` - テスト時は `Map<String, String> storage = {}` を使用
@@ -297,10 +313,58 @@
 - **具体例**: `_rankingName(String raw)` が `ranking_name_test.dart`, `local_ranking_repository_test.dart`, `ranking_page_test.dart` の3ファイルに同一定義。
 - **スキル化済み**: No
 
+## Widget テストでの Transform アニメーション検証パターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: `AnimationController` + `Transform.translate` による揺れアニメーション等を Widget テストで検証する場合、`find.byType(Transform)` は複数マッチしやすいため `find.ancestor(of: find.byType(TargetChild), matching: find.byType(Transform))` でスコープを限定する。アニメーション中間の状態を検証するには `pump(Duration)` を短い間隔で複数回呼び、`transform.transform.entry(0, 3)` (X方向) が非ゼロであることを確認する。アニメーション完了後は `pumpAndSettle()` して offset が 0 に戻ることを確認する。
+- **具体例**: `game_page_test.dart` - InputDisplay の親 Transform を ancestor で限定、10ms 間隔で pump してX方向 offset が非ゼロになるフレームを検出、pumpAndSettle 後に 0 に戻ることを確認
+- **スキル化済み**: No
+
+## AppLifecycleListener の Widget テスト検証パターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: AppLifecycleListener を使ったライフサイクル管理を Widget テストで検証するには、`tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive/resumed)` でライフサイクルイベントをシミュレートする。ConsumerStatefulWidget の initState で AppLifecycleListener を登録し、dispose で破棄するパターン。テスト時は Mock の AudioService 等のメソッド呼び出しを verify で検証する。
+- **具体例**: `AppShell._lifecycleListener` - `onInactive: _onAppInactive` で pauseBgm、`onResume: _onAppResume` で resumeBgm。テスト: `app_shell_lifecycle_test.dart` で `tester.binding.handleAppLifecycleStateChanged()` を使用
+- **スキル化済み**: No
+
+## GamePhase 変化監視による副作用実行パターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: ConsumerStatefulWidget の build メソッドで GamePhase の前回値と現在値を比較し、特定の遷移（playing -> finished 等）を検出して副作用（BGM 停止等）を実行する。build 内で直接副作用を呼ぶと warning になるため、`WidgetsBinding.instance.addPostFrameCallback` で遅延実行する。テスト時は `tester.pump()` を2回呼ぶ（1回目で build 実行、2回目で postFrameCallback 実行）。
+- **具体例**: `AppShell._previousPhase` で前回値を保持、`if (_previousPhase == playing && currentPhase == finished)` で遷移検出、`addPostFrameCallback` 内で `stopBgm()` 呼び出し
+- **スキル化済み**: No
+
 ## Static Validator から Value Object へのリファクタリングパターン
 - **カテゴリ**: 設計
 - **遭遇回数**: 1
 - **発見元**: shisoku-flutter
 - **概要**: Static メソッドのみの Validator クラスと生のコレクション型の組み合わせを、Always-Valid な Value Object に統合するリファクタリング。手順: (1) Value Object のテストを先に書く（既存テストケースを API に移行）、(2) Value Object を実装（Validator のロジックを移動）、(3) UI の参照を切り替え、(4) 旧 Validator ファイルと旧テストを削除、(5) 全テスト PASS を確認。canAddXxx クエリメソッドは UI のボタン有効/無効判定用に残す。addXxx は null を返す設計（Result 型は不要）。
 - **具体例**: `ExpressionInputValidator` (static class) + `List<Token>` → `Expression` (final class, Value Object)。ADR-001 に基づく。
+- **スキル化済み**: No
+
+## i18n テスト: l10n デリゲート解決のための pumpAndSettle / pump 追加パターン
+- **カテゴリ**: テスト
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: Flutter の l10n（AppLocalizations）を導入すると、全てのテストの MaterialApp に `localizationsDelegates`, `supportedLocales`, `locale` を追加する必要がある。さらに、l10n デリゲートは非同期で解決されるため、pumpWidget 直後に AppLocalizations.of(context) が null になる問題が発生する。対処法: (1) 一般的なテスト: pumpWidget 後に `pumpAndSettle()` を追加、(2) Timer.periodic 等を使うテスト（CountdownPage 等）: `pumpAndSettle` はタイマーを全て解決してしまうため使えない。代わりに `pumpWidget` 直後に `await tester.pump()` を1回追加して l10n を解決させ、その後で状態変更 + `pump()` を行う。
+- **具体例**: (1) `end_page_test.dart`: `setFinishedState(tester); await tester.pumpAndSettle();` (2) `countdown_page_test.dart`: `pumpWidget → pump() // l10n解決 → setCountdownState → pump() // 状態反映`。プロジェクト全体で 20+ テストファイルに影響。
+- **スキル化済み**: No
+
+## i18n: 状態としてのハードコード文字列を bool フラグに変更するパターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: State でエラーメッセージ等を翻訳済み文字列として保持している場合、i18n 導入時にロケール変更で文字列が古くなる問題がある。解決策: 状態は bool フラグ（`_hasError`）で保持し、翻訳は build メソッド内で `AppLocalizations.of(context)!` を使って行う。これにより、ロケール変更時にも常に最新の翻訳が表示される。
+- **具体例**: `ranking_page.dart` の `String? _errorMessage` → `bool _hasError`。build 内で `if (_hasError) Text(l10n.rankingLoadFailed)`。
+- **スキル化済み**: No
+
+## i18n: getter から BuildContext 受け取りメソッドへの変更パターン
+- **カテゴリ**: 設計
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: State クラス内のゲッター（`String get _xxx`）がハードコード文字列を返している場合、i18n 導入時に AppLocalizations へのアクセスが必要になる。build メソッド外のゲッターでは BuildContext が利用できないため、`String _xxx(BuildContext context)` メソッドに変更する。呼び出し側も `_xxx` → `_xxx(context)` に変更が必要。
+- **具体例**: `game_page.dart` の `String get _judgmentMessageText` → `String _judgmentMessageText(BuildContext context)`。`end_page.dart` の `String? get _nameValidationError` → `String? _nameValidationError(BuildContext context)`。
 - **スキル化済み**: No

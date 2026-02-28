@@ -56,6 +56,22 @@
 - **具体例**: STORY-024 のスワイプ削除テスト。EntryTile の ListTile に identifier がないため、画面下部 (85%) の位置で左スワイプを実行して Dismissible の確認ダイアログを発火。
 - **スキル化済み**: No
 
+## Maestro フロー名にスラッシュやコロンを含めるとレポート生成が失敗する
+- **カテゴリ**: Flow設計
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: Maestro の `name` フィールドにスラッシュ (`/`) やコロン (`:`) を含めると、テスト結果のHTMLレポート生成時にファイルパスとして不正な文字が含まれ `FileNotFoundException` が発生する。テスト自体は PASS してもコマンドの exit code が 1 になる。
+- **具体例**: `name: "STORY-017/023: Submit Button..."` でレポートパスが `/tests/2026-02-28/ai-report-STORY-017/023: ...` となり失敗。ハイフン区切り `name: "STORY-017-023 Submit Button..."` に変更して解決。
+- **スキル化済み**: No
+
+## i18n 導入後のエミュレータロケール設定漏れ
+- **カテゴリ**: デバッグ
+- **遭遇回数**: 1
+- **発見元**: shisoku-flutter
+- **概要**: Flutter の i18n (AppLocalizations) 導入後、エミュレータのロケールが `en-US` のままだと、テストフロー内の日本語 `assertVisible` が全て失敗する。表示される文字列の「出所」が変わった（ハードコード → ARB ファイル）だけで値は同じはずだが、エミュレータのロケールに応じてどの ARB が使われるかが決まる。
+- **具体例**: shisoku_flutter の全5フローが `"算数パズルゲーム" is visible` で失敗。`adb root` → `setprop persist.sys.locale ja-JP` → `settings put system system_locales ja-JP` → `stop; start` でロケール変更して解決。
+- **スキル化済み**: No
+
 ## FAB とリスト末尾アイテムの重なり問題
 - **カテゴリ**: スクロール
 - **遭遇回数**: 1
