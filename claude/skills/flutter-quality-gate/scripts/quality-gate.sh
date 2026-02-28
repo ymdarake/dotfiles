@@ -10,7 +10,9 @@
 PROJECT_ROOT="${1:-.}"
 cd "$PROJECT_ROOT" || { echo "ERROR: Cannot cd to $PROJECT_ROOT"; exit 1; }
 
-LOG_FILE="/tmp/flutter_quality_gate.txt"
+TMP_DIR="$PROJECT_ROOT/.claude/tmp"
+mkdir -p "$TMP_DIR"
+LOG_FILE="$TMP_DIR/flutter_quality_gate.txt"
 EXIT_CODE=0
 
 echo "=== Flutter 品質ゲート ==="

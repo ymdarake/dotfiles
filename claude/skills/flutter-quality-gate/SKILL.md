@@ -28,7 +28,7 @@ description: |
 ```
 
 3点チェックを順次実行し、サマリーを表示する:
-1. `flutter test` — 全テスト実行（結果を `/tmp/flutter_quality_gate.txt` に保存）
+1. `flutter test` — 全テスト実行（結果を `.claude/tmp/flutter_quality_gate.txt` に保存）
 2. `flutter analyze --no-fatal-infos` — 静的解析（error/warning のみ失敗判定、info はスキップ）
 3. `script/ddd-dependency-check.sh` — DDD レイヤー依存方向チェック（スクリプトが無ければスキップ）
 
@@ -64,6 +64,6 @@ flutter-developer / flutter-layer-first-architect の Task tool プロンプト�
 
 | チェック | 失敗時のアクション |
 |---------|------------------|
-| flutter test | テスト失敗箇所がサマリーに表示される。`/tmp/flutter_quality_gate.txt` で全出力確認 |
+| flutter test | テスト失敗箇所がサマリーに表示される。`.claude/tmp/flutter_quality_gate.txt` で全出力確認 |
 | flutter analyze | error/warning 行が表示される。info は無視して良い |
 | DDD依存チェック | 違反ファイル・行番号が表示される。import を修正する |
