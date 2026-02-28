@@ -8,8 +8,8 @@ PO が各 worktree ルートに配置する Developer への指示書フォー�
 ---
 story_id: STORY-XXX
 po_tmux_target: "<session>:<window>.<pane>"
-wave_plan: docs/plans/WAVE_{YYYYMMDD}.md
-impact_analysis: docs/plans/STORY-XXX.md
+wave_plan: doc/plan/WAVE_{YYYYMMDD}.md
+impact_analysis: doc/plan/STORY-XXX.md
 ---
 
 # 実装指示書: [STORY-XXX] <タイトル>
@@ -26,11 +26,11 @@ So that <理由>
 
 ## 影響分析
 
-`docs/plans/STORY-XXX.md` を Read で参照してください。
+`doc/plan/STORY-XXX.md` を Read で参照してください。
 
 ## Wave 計画書
 
-`docs/plans/WAVE_{YYYYMMDD}.md` の、あなたが担当する Wave セクションを参照してください。
+`doc/plan/WAVE_{YYYYMMDD}.md` の、あなたが担当する Wave セクションを参照してください。
 
 ## 実装手順
 

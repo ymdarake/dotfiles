@@ -10,9 +10,9 @@ Task tool → flutter-layer-first-architect:
 各ストーリーの影響分析（Plan）を読み込み、以下を策定してください。
 
 ## 対象ストーリー
-- [STORY-XXX] <タイトル> → docs/plans/STORY-XXX.md
-- [STORY-YYY] <タイトル> → docs/plans/STORY-YYY.md
-- [STORY-ZZZ] <タイトル> → docs/plans/STORY-ZZZ.md
+- [STORY-XXX] <タイトル> → doc/plan/STORY-XXX.md
+- [STORY-YYY] <タイトル> → doc/plan/STORY-YYY.md
+- [STORY-ZZZ] <タイトル> → doc/plan/STORY-ZZZ.md
 
 ## BACKLOG.md の AC
 <各ストーリーの Gherkin AC を貼り付け>

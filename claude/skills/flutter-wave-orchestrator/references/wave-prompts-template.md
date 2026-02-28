@@ -9,7 +9,7 @@ Task tool → flutter-layer-first-architect:
 "Wave 計画書に基づき、複数ストーリーにまたがる共有 interface の定義とスタブ実装を行ってください。
 
 ## Wave 計画書
-docs/plans/WAVE_{YYYYMMDD}.md（※ {YYYYMMDD} は実際の日付に置換）
+doc/plan/WAVE_{YYYYMMDD}.md（※ {YYYYMMDD} は実際の日付に置換）
 
 ## 実施内容
 計画書の「Wave 0: 共有アーキテクチャ準備」セクションの Tasks を全て実施してください。
@@ -121,7 +121,7 @@ Task tool → flutter-developer:
 
 ## 解決方針
 Wave 計画書の順序制約に従い、両方の変更を統合してください。
-docs/plans/WAVE_{YYYYMMDD}.md（※ {YYYYMMDD} は実際の日付に置換） を参照。
+doc/plan/WAVE_{YYYYMMDD}.md（※ {YYYYMMDD} は実際の日付に置換） を参照。
 
 ## 解決後
 - `dart analyze` + `flutter test` で品質確認

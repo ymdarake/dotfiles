@@ -31,11 +31,11 @@ description: |
 
 ```
 Phase 1: 影響分析（Plan × N ストーリー）
-  → 各 docs/plans/STORY-XXX.md を生成
+  → 各 doc/plan/STORY-XXX.md を生成
 
 Phase 2: Wave 計画策定（flutter-layer-first-architect）
   → 全 Plan を読み、競合分析 + 共有 interface 特定 + Wave 分割
-  → docs/plans/WAVE_{YYYYMMDD}.md に出力
+  → doc/plan/WAVE_{YYYYMMDD}.md に出力
 
 Phase 3: Wave 実行（PO がオーケストレーション）
   → Wave 0: flutter-layer-first-architect が「複数ストーリーにまたがる共有 interface」のみ実装
@@ -86,7 +86,7 @@ Phase 3: Wave 実行（PO がオーケストレーション）
   4. AC 実現に必要な変更箇所の候補（何を変えるかの事実列挙。どう変えるかは書かない）"
 ```
 
-PO が各出力を `docs/plans/STORY-XXX.md` に Write で保存する。
+PO が各出力を `doc/plan/STORY-XXX.md` に Write で保存する。
 
 ---
 
@@ -96,7 +96,7 @@ PO が各出力を `docs/plans/STORY-XXX.md` に Write で保存する。
 
 `flutter-layer-first-architect` への依頼プロンプトは [architect-wave-planning.md](references/architect-wave-planning.md) を参照。
 
-`flutter-layer-first-architect` の出力を PO が `docs/plans/WAVE_{YYYYMMDD}.md` に保存する。
+`flutter-layer-first-architect` の出力を PO が `doc/plan/WAVE_{YYYYMMDD}.md` に保存する。
 計画書のフォーマットは [wave-plan-template.md](references/wave-plan-template.md) に従う。
 
 ### 計画書の確認ポイント

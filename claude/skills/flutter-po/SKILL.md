@@ -20,11 +20,11 @@ user_invocable: true
 ```
 Grooming: ヒアリング → ストーリー作成 → BACKLOG.md 書き出し → 🛑 ユーザー承認待ち（ここで終了）
 
-Plan: BACKLOG.md → 対象ストーリー特定 → Plan エージェント並列起動 → docs/plans/ に保存 → 🛑 終了
+Plan: BACKLOG.md → 対象ストーリー特定 → Plan エージェント並列起動 → doc/plan/ に保存 → 🛑 終了
 
 Next:
   Step 1: ストーリー取得（BACKLOG.md → In Progress）
-  Step 1.5: 影響分析（Plan エージェント → 事実の探索と整理 → docs/plans/ に保存）
+  Step 1.5: 影響分析（Plan エージェント → 事実の探索と整理 → doc/plan/ に保存）
   Step 2: Architect 起動（影響分析を基に設計判断 + interface + スタブ + TODO 作成）→ 完了報告を確認
   Step 3: Developer 起動（TDD サイクル）→ 完了報告を評価
   Step 4: 中間品質ゲート（成功→続行 / 失敗→再起動1回 / 曖昧→エスカレーション）
@@ -55,7 +55,7 @@ Next:
 ## 4つのモード
 
 - **Grooming**: 要望をユーザーストーリー + Gherkin AC に整理し、BACKLOG.md に書き出す
-- **Plan**: BACKLOG.md の対象ストーリーの影響分析を一括生成し、docs/plans/ に保存する
+- **Plan**: BACKLOG.md の対象ストーリーの影響分析を一括生成し、doc/plan/ に保存する
 - **Next**: BACKLOG.md の最優先タスクを取得し、サブエージェントをチェーン起動して実装する
 - **Wave**: 複数ストーリーを Wave 方式で並列実装する（flutter-wave-orchestrator を内部呼び出し）
 
@@ -96,7 +96,7 @@ BACKLOG.md の `Current Sprint` を確認する。
 
 ## Plan モード
 
-BACKLOG.md の対象ストーリーの影響分析（docs/plans/STORY-XXX.md）を一括生成する。
+BACKLOG.md の対象ストーリーの影響分析（doc/plan/STORY-XXX.md）を一括生成する。
 実装には進まない。Next / Wave の事前準備として使用する。
 
 ### ワークフロー
@@ -104,11 +104,11 @@ BACKLOG.md の対象ストーリーの影響分析（docs/plans/STORY-XXX.md）�
 1. BACKLOG.md を読み、対象ストーリーを特定する
    - ユーザーがストーリー ID を指定した場合 → 指定されたストーリーのみ
    - 指定なしの場合 → Current Sprint 内の Status が `Todo` の全ストーリー
-2. 既に docs/plans/STORY-XXX.md が存在するストーリーはスキップする（上書きしない）
+2. 既に doc/plan/STORY-XXX.md が存在するストーリーはスキップする（上書きしない）
    - ユーザーが明示的に再生成を指示した場合は上書きする
 3. 対象ストーリーごとに Task tool で Plan エージェント（subagent_type: Plan）を並列起動する
    （プロンプトは Next モード Step 1.5 と同一）
-4. 各 Plan エージェントの出力を PO が docs/plans/STORY-XXX.md に Write で保存する（Plan エージェントは Write 権限を持たないため）
+4. 各 Plan エージェントの出力を PO が doc/plan/STORY-XXX.md に Write で保存する（Plan エージェントは Write 権限を持たないため）
 5. 全ストーリーの Plan 完了後、一覧を表示して終了する
 
 🛑 Plan モード完了後、Next / Wave モードへ自動遷移しない。
@@ -131,7 +131,7 @@ Task tool で `Plan` エージェント（`subagent_type: Plan`）を起動し�
 
 **Plan の責務は「事実の探索と整理」に限定する。設計判断は Architect の責務。**
 
-Plan の出力は `docs/plans/STORY-XXX.md` にファイルとして保存する。
+Plan の出力は `doc/plan/STORY-XXX.md` にファイルとして保存する。
 これにより Architect / Developer がコンテキストに依存せず `Read` で参照できる。
 
 ```
@@ -152,13 +152,13 @@ Technical Notes: <BACKLOG.md の Technical Notes>
 4. AC 実現に必要な変更箇所の候補（何を変えるかの事実列挙。どう変えるかは書かない）"
 ```
 
-Plan エージェントの出力を PO が `docs/plans/STORY-XXX.md` に Write で保存する
+Plan エージェントの出力を PO が `doc/plan/STORY-XXX.md` に Write で保存する
 （Plan エージェントは Write ツールを持たないため、PO が代行する）。
 
 保存後、影響範囲の妥当性・漏れがないかをチェックしてから Step 2 に進む。
 
 **スキップ条件**（以下の場合は Step 1.5 を省略して Step 2 に進む）:
-- `docs/plans/STORY-XXX.md` が既に存在する場合（Plan モードで生成済み）
+- `doc/plan/STORY-XXX.md` が既に存在する場合（Plan モードで生成済み）
 - E2E フローの修正のみ（lib/ 変更なし）
 - 単純な1ファイル変更
 - ユーザーが既に詳細な計画を提供済み
@@ -170,11 +170,11 @@ Task tool で `flutter-layer-first-architect` エージェントを起動し、P
 ```
 Task tool → flutter-layer-first-architect:
 "Plan エージェントが影響分析を作成済みです。
-まず docs/plans/STORY-XXX.md を Read で読み込み、
+まず doc/plan/STORY-XXX.md を Read で読み込み、
 影響分析の内容を踏まえて設計判断を行い、必要な domain interface の作成と実装スタブ（TODO マーカー付き）を作成してください。
 
 ## 影響分析ファイル
-docs/plans/STORY-XXX.md
+doc/plan/STORY-XXX.md
 
 ## ユーザーストーリー
 <ストーリー内容>
@@ -203,7 +203,7 @@ Task tool → flutter-developer:
 ストーリー: [STORY-XXX] <タイトル>
 受け入れ条件: <Gherkin AC>
 
-影響分析: docs/plans/STORY-XXX.md
+影響分析: doc/plan/STORY-XXX.md
 （実装判断に迷った場合、影響分析の内容を参考にしてください）
 
 1. `// TODO(developer)` マーカーを検索して実装箇所を把握する
@@ -243,8 +243,8 @@ Task tool → maestro-e2e:
 
 - **成功**:
   1. BACKLOG.md の `Current Sprint` からスプリント番号を取得する
-  2. `docs/iterations/sprint-N.md` が存在しなければ [iteration-template.md](references/iteration-template.md) から作成する
-  3. 完了ストーリーのセクション全体（User Story + AC + Technical Notes）を `docs/iterations/sprint-N.md` に追記する
+  2. `doc/iteration/sprint-N.md` が存在しなければ [iteration-template.md](references/iteration-template.md) から作成する
+  3. 完了ストーリーのセクション全体（User Story + AC + Technical Notes）を `doc/iteration/sprint-N.md` に追記する
      - **完了日** を付与する（例: `**完了日**: 2026-02-14`）
   4. BACKLOG.md から該当ストーリーのセクションを削除する
 - **失敗**: ユーザーにエスカレーション
@@ -277,9 +277,9 @@ Task tool → maestro-e2e:
 
 flutter-wave-orchestrator の手順に従い、PO がオーケストレーションする:
 
-1. **Phase 1**: 対象ストーリーごとに Plan エージェントを並列起動 → `docs/plans/STORY-XXX.md` に保存
+1. **Phase 1**: 対象ストーリーごとに Plan エージェントを並列起動 → `doc/plan/STORY-XXX.md` に保存
    - Plan モードで事前生成済みの場合、Phase 1 をスキップする。
-2. **Phase 2**: Architect に全 Plan を渡して Wave 計画策定を依頼 → `docs/plans/WAVE_{YYYYMMDD}.md` に保存
+2. **Phase 2**: Architect に全 Plan を渡して Wave 計画策定を依頼 → `doc/plan/WAVE_{YYYYMMDD}.md` に保存
 3. **Phase 3**: 計画書に従い各 Wave を順次実行
    - Wave 0: `flutter-layer-first-architect` が interface 定義 + スタブ
    - Wave 1+: PO が tmux で worktree ごとに `claude --agent flutter-developer` を起動。
@@ -287,7 +287,7 @@ flutter-wave-orchestrator の手順に従い、PO がオーケストレーショ
      （Task tool ではなく独立 Claude インスタンスで実行。詳細は flutter-wave-orchestrator を参照）
    - Wave N-1: 統合マージ + レビュー
    - Wave N: Maestro E2E（UI 変更時）
-4. **完了**: 全ストーリーを `docs/iterations/sprint-N.md` にアーカイブ
+4. **完了**: 全ストーリーを `doc/iteration/sprint-N.md` にアーカイブ
 
 **詳細は flutter-wave-orchestrator スキルの SKILL.md を参照。**
 
